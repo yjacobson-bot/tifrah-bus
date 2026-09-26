@@ -98,8 +98,11 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .pager-btns button:disabled{opacity:.3;cursor:not-allowed}
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty .ico{font-size:40px;margin-bottom:8px}
-/* ══════════ Toast ══════════ */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
+/* ══════════ הדגשת חיפוש ══════════ */
+mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
+:root[data-theme="dark"] mark,:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}}
+/* ══════════ Toast ══════════ */.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
   display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;
   font-size:14px;font-weight:600;box-shadow:0 4px 24px rgba(0,0,0,.2);white-space:nowrap;max-width:90vw}
 .toast-success{background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
@@ -165,7 +168,7 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
         <button class="btn-refresh" onclick="manualRefresh()">🔄 רענן</button>
       </div>
     </div>
-    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span></div>
+    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button></div>
   </div>
 </header>
 
@@ -655,6 +658,14 @@ function applyDrillFilter(){
   _drillFiltered=q?base.filter(r=>_columns.some(c=>String(cellVal(r,c)).toLowerCase().includes(q))):base;
   renderDrillTable();
 }
+
+function highlight(text,q){
+  if(!q)return esc(text);
+  const s=String(text);
+  const idx=s.toLowerCase().indexOf(q.toLowerCase());
+  if(idx<0)return esc(s);
+  return esc(s.slice(0,idx))+'<mark>'+esc(s.slice(idx,idx+q.length))+'</mark>'+esc(s.slice(idx+q.length));
+}
 function renderDrillTable(){
   let rows=[..._drillFiltered];
   if(_drillSort)rows.sort((a,b)=>{
@@ -671,7 +682,8 @@ function renderDrillTable(){
     ?pageRows.map((r,i)=>`<tr><td class="idx" data-label="#">${start+i+1}</td>${_columns.map(c=>{
         const v=cellVal(r,c);
         const cls=(c.toLowerCase().includes('phone')||c==='Folder')?'phone':'';
-        return`<td class="${cls}" data-label="${esc(colLabel(c))}">${esc(v)}</td>`
+        const q=(qs('search-in').value||'').toLowerCase();
+        return`<td class="${cls}" data-label="${esc(colLabel(c))}">${highlight(v,q)}</td>`
       }).join('')}</tr>`).join('')
     :`<tr><td colspan="${_columns.length+1}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
   qs('list-info').textContent=`${total.toLocaleString('he')} רשומות`;
@@ -753,7 +765,18 @@ function startTimer(){
 }
 async function manualRefresh(){_cdCount=CONFIG.refreshSec;updateRing();const st=saveState();await loadData();await restoreState(st);}
 
+function toggleTheme(){
+  const root=document.documentElement;
+  const cur=root.getAttribute('data-theme');
+  const isDark=cur==='dark'||(cur===null&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const next=isDark?'light':'dark';
+  root.setAttribute('data-theme',next);
+  qs('btn-theme').textContent=next==='dark'?'☀️':'🌙';
+  try{localStorage.setItem('theme',next)}catch{}
+}
+// שחזור עדפת ערכת נושא
 (async function(){
+  try{const t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);const btn=qs('btn-theme');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';}}catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
   await loadData();startTimer();
 })();
