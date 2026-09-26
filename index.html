@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>רישום הסעות ישיבת תפרח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&display=swap">
+<style>
+:root{--navy:#1A3555;--navy-mid:#22477A;--accent:#2563EB;--accent-dim:#DBEAFE;--sky:#F0F6FF;--white:#FFFFFF;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g600:#475569;--g900:#0F172A;--green:#166534;--green-bg:#DCFCE7;--red:#991B1B;--red-bg:#FEE2E2;--amber:#92400E;--amber-bg:#FEF3C7;--bg:var(--sky);--surface:var(--white);--text:var(--g900);--muted:var(--g600);--border:var(--g200)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1829;--surface:#112240;--text:#CBD5E0;--muted:#64748B;--border:#1E3A5C;--sky:#0B1829;--g50:#0D1B2E;--g100:#112240;--g200:#1E3A5C;--white:#112240;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1829;--surface:#112240;--text:#CBD5E0;--muted:#64748B;--border:#1E3A5C;--sky:#0B1829;--g50:#0D1B2E;--g100:#112240;--g200:#1E3A5C;--white:#112240;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:'Assistant',system-ui,sans-serif;background:var(--bg);color:var(--text);direction:rtl;font-size:15px;line-height:1.5}
+#top-bar{background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#fff;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.bar-inner{max-width:1400px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center;gap:12px}
+.brand{font-size:17px;font-weight:800;flex:0 0 auto}
+.brand small{font-size:12px;font-weight:400;opacity:.65;margin-right:6px}
+.bar-center{flex:1;display:flex;align-items:center;justify-content:center}
+#refresh-bar{display:flex;align-items:center;gap:8px;font-size:13px;opacity:.85}
+#countdown-ring{width:30px;height:30px;flex-shrink:0}
+#countdown-ring svg{transform:rotate(-90deg)}
+#ring-bg{fill:none;stroke:rgba(255,255,255,.25);stroke-width:3}
+#ring-fg{fill:none;stroke:#7DD3FC;stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset .9s linear;stroke-dasharray:75.4}
+.bar-end{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.gray{background:#94A3B8}.dot.pulse{background:#FCD34D;animation:blink .8s infinite alternate}
+.dot.ok{background:#6EE7B7}.dot.err{background:#FCA5A5}
+@keyframes blink{to{opacity:.3}}
+#status-lbl{font-size:13px;opacity:.8}
+.btn-refresh{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-family:inherit;cursor:pointer}
+.btn-refresh:hover{background:rgba(255,255,255,.25)}
+#body{max-width:1400px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:14px}
+.alert{padding:12px 16px;border-radius:10px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.alert.info{background:var(--accent-dim);color:#1E40AF;border:1px solid #93C5FD}
+.alert.success{background:var(--green-bg);color:var(--green);border:1px solid #86EFAC}
+.alert.warning{background:var(--amber-bg);color:var(--amber);border:1px solid #FCD34D}
+.alert.error{background:var(--red-bg);color:var(--red);border:1px solid #FCA5A5}
+.alert strong{display:block;margin-bottom:2px}
+code{background:rgba(0,0,0,.08);padding:1px 5px;border-radius:4px;font-size:12px}
+#cfg-warn{background:var(--amber-bg);color:var(--amber);border:1px solid #FCD34D;border-radius:10px;padding:12px 16px;font-size:14px}
+#cfg-warn strong{display:block;margin-bottom:4px}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0}
+.section-meta{font-size:13px;color:var(--muted)}
+#city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.city-card{border-radius:12px;padding:14px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;border:2px solid transparent}
+.city-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.city-card:active{transform:scale(.97)}
+.city-count{font-size:28px;font-weight:800;line-height:1;margin-bottom:4px}
+.city-name{font-size:13px;font-weight:600;opacity:.85;word-break:break-word}
+.city-pct{position:absolute;bottom:6px;left:10px;font-size:11px;opacity:.55}
+.bar-bg{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.25)}
+.bar-fill{position:absolute;bottom:0;left:0;height:4px;background:rgba(255,255,255,.6);border-radius:0 2px 2px 0}
+.cc0{background:#2563EB;color:#fff}.cc1{background:#7C3AED;color:#fff}.cc2{background:#DB2777;color:#fff}
+.cc3{background:#DC2626;color:#fff}.cc4{background:#D97706;color:#fff}.cc5{background:#059669;color:#fff}
+.cc6{background:#0891B2;color:#fff}.cc7{background:#4338CA;color:#fff}.cc8{background:#BE185D;color:#fff}
+.cc9{background:#92400E;color:#fff}.cc10{background:#047857;color:#fff}.cc11{background:#0E7490;color:#fff}
+.city-card-total{background:var(--g100);color:var(--text);border:2px solid var(--border);cursor:default}
+.city-card-total:hover{transform:none;box-shadow:none}
+#drill-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.btn-back{display:flex;align-items:center;gap:6px;background:var(--g100);border:1.5px solid var(--border);color:var(--text);padding:7px 14px;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.btn-back:hover{background:var(--g200)}
+.drill-title{font-size:19px;font-weight:800;flex:1}
+.drill-count{font-size:13px;color:var(--muted)}
+#nbhd-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.nbhd-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:var(--g100);border:1.5px solid var(--border);font-size:13px;cursor:pointer;white-space:nowrap}
+.nbhd-chip:hover{background:var(--g200)}
+.nbhd-chip .n-count{font-weight:700;color:var(--accent)}
+.nbhd-chip.active{background:var(--accent-dim);border-color:#93C5FD;color:#1E40AF}
+.nbhd-chip.active .n-count{color:#1E40AF}
+.search-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.search-box{position:relative;flex:1;min-width:160px}
+.search-box input{width:100%;height:36px;padding:0 36px 0 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;direction:rtl;outline:none}
+.search-box input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.tbl-info{font-size:13px;color:var(--muted)}
+.btn-export{background:var(--accent-dim);color:var(--accent);border:1.5px solid #93C5FD;padding:6px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn-export:hover{background:#BFDBFE}
+.tbl-wrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:500px}
+thead th{background:var(--g50);padding:9px 12px;text-align:right;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap;border-bottom:1.5px solid var(--border);cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+.sort-ico{margin-right:3px;font-size:9px;opacity:.5}
+thead th.sorted .sort-ico{opacity:1}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--g50)}
+tbody td{padding:8px 12px;vertical-align:middle;font-variant-numeric:tabular-nums}
+tbody td.phone{direction:ltr;text-align:right;font-family:'Courier New',monospace;font-size:13px;color:var(--muted)}
+tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
+.pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:13px;color:var(--muted)}
+.pager-btns{display:flex;gap:4px}
+.pager-btns button{width:30px;height:30px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;cursor:pointer}
+.pager-btns button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.pager-btns button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pager-btns button:disabled{opacity:.3;cursor:not-allowed}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .ico{font-size:40px;margin-bottom:8px}
+/* ══════════ Toast ══════════ */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
+  display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;
+  font-size:14px;font-weight:600;box-shadow:0 4px 24px rgba(0,0,0,.2);white-space:nowrap;max-width:90vw}
+.toast-success{background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
+.toast-error{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5}
+.toast-warning{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
+.toast-info{background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD}
+/* ══════════ מובייל ══════════ */
+@media(max-width:640px){
+  /* סרגל עליון */
+  .bar-inner{padding:0 12px;height:50px;gap:8px}
+  .brand{font-size:14px}
+  #refresh-label{display:none}
+  #countdown-ring{width:26px;height:26px}
+  #status-lbl{display:none}
+  .btn-refresh{padding:4px 9px;font-size:11px}
+  /* גוף */
+  #body{padding:10px 10px 80px;gap:10px}
+  .section{padding:12px 12px;border-radius:12px}
+  .section-head{margin-bottom:10px}
+  .section-title{font-size:11px}
+  /* כרטיסי ערים */
+  #city-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  #nbhd-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+  .city-count{font-size:26px}
+  .city-name{font-size:12px}
+  /* כפתור חזרה בתחתית (sticky) */
+  .btn-back{position:fixed;bottom:16px;right:16px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.25);border-radius:24px;padding:10px 20px;font-size:15px;background:var(--navy);color:#fff;border-color:transparent}
+  /* כותרת drill */
+  #drill-header{flex-direction:row-reverse;justify-content:flex-end}
+  .drill-title{font-size:17px}
+  /* טבלה — כרטיסים במקום שורות */
+  table,thead,tbody,th,td,tr{display:block}
+  thead tr{position:absolute;top:-9999px;right:-9999px}
+  tbody tr{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:10px 12px;background:var(--surface)}
+  tbody tr:hover{background:var(--g50)}
+  tbody td{border:none;padding:3px 0;font-size:13px;display:flex;gap:6px;align-items:baseline}
+  tbody td::before{content:attr(data-label);font-size:11px;color:var(--muted);font-weight:700;min-width:70px;flex-shrink:0}
+  tbody td.idx{display:none}
+  tbody td.phone{direction:ltr;justify-content:flex-end}
+  /* חיפוש + ייצוא */
+  .search-row{flex-direction:column;align-items:stretch}
+  .btn-export{width:100%;text-align:center}
+  /* עמודות */
+  .pager{flex-direction:column;align-items:center;gap:6px}
+  .pager-btns button{width:36px;height:36px;font-size:15px}
+  /* עוגה */
+  #pie-wrap,#nbhd-pie-wrap,#ramot-pie-wrap{flex-direction:column;align-items:center;gap:16px}
+  /* רמות */
+  #ramot-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+}
+</style>
+</head>
+<body>
+
+<header id="top-bar">
+  <div class="bar-inner">
+    <div class="brand">🚌 <span>רישום הסעות ישיבת תפרח</span></div>
+    <div class="bar-center">
+      <div id="refresh-bar">
+        <div id="countdown-ring"><svg width="30" height="30" viewBox="0 0 30 30"><circle id="ring-bg" cx="15" cy="15" r="12"/><circle id="ring-fg" cx="15" cy="15" r="12" stroke-dashoffset="0"/></svg></div>
+        <span id="refresh-label">ריענון עוד <b id="cd-num">10</b> שנ'</span>
+        <button class="btn-refresh" onclick="togglePause()" id="btn-pause">⏸ השהה</button>
+        <button class="btn-refresh" onclick="manualRefresh()">🔄 רענן</button>
+      </div>
+    </div>
+    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span></div>
+  </div>
+</header>
+
+<div id="toast" class="toast" hidden></div>
+<div id="body">
+  <div id="cfg-warn" hidden style="background:var(--amber-bg);color:var(--amber);border:1px solid #FCD34D;border-radius:10px;padding:12px 16px;font-size:14px"><strong>⚙️ עדכן פרטי כניסה</strong> ערוך את הקובץ ועדכן <code>sysNum</code> ו-<code>password</code>.</div>
+
+  <div id="view-dashboard">
+    <div class="section">
+      <div class="section-head"><span class="section-title">סיכום לפי ערים</span><span id="dash-meta" class="section-meta"></span></div>
+      <div id="city-grid"><div class="empty"><div class="ico">🏙️</div><p>טוען נתונים…</p></div></div>
+    </div>
+    <div class="section" id="pie-section" hidden>
+      <div class="section-head"><span class="section-title">התפלגות לפי עיר</span></div>
+      <div id="pie-wrap" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <div id="view-city" hidden>
+    <div class="section">
+      <div id="drill-header">
+        <button class="btn-back" onclick="backToDash()">← חזרה לסיכום</button>
+        <div><div class="drill-title" id="drill-title"></div><div class="drill-count" id="drill-count"></div></div>
+      </div>
+    </div>
+    <div class="section" id="nbhd-section" hidden>
+      <div class="section-head"><span class="section-title">סיכום לפי שכונות</span><span id="nbhd-meta" class="section-meta"></span></div>
+      <div id="nbhd-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px"></div>
+      <div id="nbhd-pie-wrap" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap"></div>
+    </div>
+    <div class="section" id="ramot-section" hidden>
+      <div class="section-head"><span class="section-title">📍 בתוך רמות</span><span id="ramot-meta" class="section-meta"></span></div>
+      <div id="ramot-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px"></div>
+      <div id="ramot-pie-wrap" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="section-title">רשימת רשומות</span></div>
+      <div class="search-row">
+        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
+        <span id="list-info" class="tbl-info"></span>
+        <button class="btn-export" onclick="exportCSV()">⬇ ייצא CSV</button>
+      </div>
+      <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
+      <div class="pager"><span id="page-info"></span><div class="pager-btns" id="page-btns"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  שנה כאן את פרטי הכניסה
+// ════════════════════════════════════════════
+const CONFIG={
+  sysNum:   '033050999',
+  password: '556778',
+  folder:   '2/1',     // שלוחה
+  refreshSec: 10
+};
+// ════════════════════════════════════════════
+// מיפוי שדות מ-ApprovalAll.ini
+// ════════════════════════════════════════════
+const FIELD_LABELS={
+  'P050': 'עיר',
+  'P051': 'שכונה',
+  'P052': 'בתוך רמות'
+};
+// ערים: P050+N
+const CITY_MAP={
+  '1':'ירושלים','2':'בני ברק','3':'בית שמש',
+  '4':'מודיעין עילית','5':'ביתר','6':'אלעד'
+};
+// שכונות: P051+N
+const NBHD_MAP={
+  '1':'רמת שלמה','2':'נווה יעקב','3':'גבעת שאול',
+  '4':'הר נוף','5':'בית וגן','6':'יקירי ירושלים',
+  '7':'שכונות הצפון','8':'סנהדריה, סנהדריה מורחבת ורמת אשכול',
+  '9':'בר אילן שמואל הנביא','0':'רמות'
+};
+// בתוך רמות: P052+N
+const RAMOT_MAP={
+  '1':'רמות א','2':'רמות ב','3':'רמות ג',
+  '4':'רמות ד','5':'רמות פולין'
+};
+
+const API='https://private.call2all.co.il/ym/api/';
+let _token=null,_tokenAt=0,_records=[],_columns=[];
+// שדות קבועים לפי ApprovalAll.ini
+const CITY_KEY='P050';
+const NBHD_KEY='P051';
+let _activeCity=null,_activeNbhd=null,_drillFiltered=[],_drillPage=1;
+let _drillSort=null,_drillSortAsc=true,_timerInterval=null,_cdCount=CONFIG.refreshSec,_paused=false;
+const PAGE_SIZE=50;
+const COL_CLS=['cc0','cc1','cc2','cc3','cc4','cc5','cc6','cc7','cc8','cc9','cc10','cc11'];
+
+function qs(id){return document.getElementById(id)}
+function setStatus(cls,txt){qs('dot').className='dot '+cls;qs('status-lbl').textContent=txt}
+
+// ── Toast / התראות ──
+let _toastTimer=null;
+function showAlert(type,title,msg){
+  const el=qs('toast');if(!el)return;
+  const icons={success:'✅',warning:'⚠️',error:'❌',info:'ℹ️'};
+  el.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span><strong>${esc(title)}</strong>${msg?' — '+esc(msg):''}</span><button onclick="clearAlert()" style="background:none;border:none;cursor:pointer;font-size:16px;color:inherit;padding:0 4px">✕</button>`;
+  el.className='toast toast-'+type;el.hidden=false;
+  clearTimeout(_toastTimer);_toastTimer=setTimeout(clearAlert,4000);
+}
+function clearAlert(){const el=qs('toast');if(el)el.hidden=true;clearTimeout(_toastTimer)}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function credsOK(){return CONFIG.sysNum!=='XXXXX'&&CONFIG.password!=='YYYYY'}
+
+// תרגום ערכים מספריים לשמות
+function cityLabel(v){return CITY_MAP[String(v)]||'(לא ידוע)'}
+function nbhdLabel(v){return NBHD_MAP[String(v)]||'(לא ידוע)'}
+function ramotLabel(v){return RAMOT_MAP[String(v)]||''}
+
+// תרגום שמות עמודות טכניות לעברית
+function colLabel(k){
+  if(FIELD_LABELS[k])return FIELD_LABELS[k];
+  const m={'ValName':'שם','Phone':'טלפון','Folder':'טלפון','phone':'טלפון','Date':'תאריך',
+    'EnterDate':'תאריך כניסה','ExitDate':'תאריך יציאה','Status':'סטטוס',
+    'Booking':'מספר הזמנה','DID':'מספר חייג','IncomingDID':'DID','var':'משתנה',
+    'Data':'נתונים','IdType':'סוג זיהוי','_period':'חודש','_path':'קובץ'};
+  return m[k]||k;
+}
+
+async function ensureToken(){
+  if(_token&&Date.now()-_tokenAt<25*60*1000)return _token;
+  setStatus('pulse','מתחבר…');
+  let text;
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),8000);
+    const res=await fetch(`${API}Login?username=${encodeURIComponent(CONFIG.sysNum)}&password=${encodeURIComponent(CONFIG.password)}`,{signal:ctrl.signal});
+    clearTimeout(tid);
+    text=await res.text();
+  }catch(e){
+    const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (8 שנ\')':('שגיאת רשת/CORS: '+e.message);
+    
+    qs('city-grid').innerHTML=`<div class="empty"><div class="ico">⏱️</div><p style="color:#DC2626">${msg}</p><p style="font-size:12px">ודא שהקובץ נפתח כ-file:// ולא מ-localhost</p></div>`;
+    throw new Error(msg);
+  }
+  let tok=null;
+  try{const j=JSON.parse(text);if(j.token)tok=j.token;else if(j.responseStatus&&j.responseStatus!=='OK')throw new Error(j.message||text)}catch(e){if(e.message.includes('JSON')){}else throw e}
+  if(!tok){const m=text.match(/token[=:"]+([A-Za-z0-9+\/=_\-]{4,})/);if(m)tok=m[1]}
+  if(!tok)throw new Error('כניסה נכשלה: '+text.slice(0,150));
+  _token=tok;_tokenAt=Date.now();setStatus('ok','מחובר');return _token;
+}
+
+async function downloadFile(path,timeoutMs=15000){
+  const tok=await ensureToken();
+  try{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),timeoutMs);
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${path}`,{signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok)return null;
+    const t=await r.text();
+    return(t&&!t.includes('"responseStatus":"ERROR"'))?t:null;
+  }catch{return null}
+}
+async function getDir(path){
+  const tok=await ensureToken();
+  try{return parseDirText(await(await fetch(`${API}GetIVR2Dir?token=${tok}&path=ivr2:${path}`)).text())}
+  catch{return{folders:[],files:[]}}
+}
+function parseDirText(text){
+  if(!text||text.includes('"responseStatus":"ERROR"'))return{folders:[],files:[]};
+  try{
+    const j=JSON.parse(text);
+    if(j.files){return{
+      folders:j.files.filter(f=>f.isFolder||f.type==='d').map(f=>f.name||f),
+      files:j.files.filter(f=>!f.isFolder&&f.type!=='d').map(f=>f.name||f)
+    }}
+  }catch{}
+  const folders=[],files=[];
+  for(const line of text.split('\n')){
+    const t=line.trim();if(!t)continue;
+    if(t.includes('type=d')||t.endsWith('/'))folders.push(t.replace(/\/$|type=d.*$/,'').replace(/^name=/,'').trim());
+    else if(t.includes('.')||t.includes('type=f'))files.push(t.replace(/type=f.*$/,'').replace(/^name=/,'').trim());
+    else if(t.length>1)folders.push(t);
+  }
+  return{folders,files};
+}
+
+// פרסר ייעודי ל-ApprovalAll.ymgr
+// פורמט: Status#OK%Phone#05X%P050#1%ValName#שם
+function parseApprovalAll(text){
+  const recs=[];
+  for(const line of text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n')){
+    const tr=line.trim();if(!tr||tr.startsWith('{'))continue;
+    const rec={};
+    for(const part of tr.split('%')){
+      const i=part.indexOf('#');if(i<=0)continue;
+      const k=part.slice(0,i).trim(),v=part.slice(i+1).trim();
+      if(k)rec[k]=v;
+    }
+    if(Object.keys(rec).length>0)recs.push(rec);
+  }
+  return recs;
+}
+
+function parseYMGR(text){
+  const recs=[];
+  for(const line of text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n')){
+    const tr=line.trim();if(!tr||tr.startsWith('{'))continue;
+    const rec={};
+    for(const p of(tr.includes('\t')?tr.split('\t'):tr.split(' '))){
+      const i=p.indexOf('#');
+      if(i>0){
+        const k=p.slice(0,i).trim(),v=p.slice(i+1).trim();
+        if(!k)continue;
+        if(k.length<=12&&/^[A-Za-z0-9_]+$/.test(k)){
+          // שדה רגיל: Phone, Date, P050 וכו'
+          rec[k]=v;
+        } else if(k.length<80){
+          const combined=k+'#'+v;
+          // פורמט Log: P050%Log#2
+          for(const [,num,val] of combined.matchAll(/P0(\d{2,3})%Log#(\w+)/g)){rec[`P0${num}`]=val}
+          // פורמט Approval: %P050#1
+          for(const [,num,val] of combined.matchAll(/%P0(\d{2,3})#([^%\s]+)/g)){rec[`P0${num}`]=val}
+        }
+      }
+    }
+    if(Object.keys(rec).length>0)recs.push(rec);
+  }
+  return recs;
+}
+
+function buildColumns(records){
+  const keys=[...new Set(records.flatMap(r=>Object.keys(r)))];
+  // עמודות מועדפות קודם
+  const prio=['ValName','Phone','Date',CITY_KEY,NBHD_KEY,'P052','Status','Booking'];
+  const hidden=['_path','_period','DID','IncomingDID','var','IdType','Data','Folder','HebrewDate','Time','EnterId','IdType'];
+  _columns=keys.filter(k=>!hidden.includes(k));
+  _columns.sort((a,b)=>{const ai=prio.indexOf(a),bi=prio.indexOf(b);
+    if(ai<0&&bi<0)return a.localeCompare(b,'he');if(ai<0)return 1;if(bi<0)return-1;return ai-bi});
+}
+
+// ערך מוצג של רשומה בעמודה (עם תרגום לעברית)
+function cellVal(rec,col){
+  const v=rec[col]??'';
+  if(col===CITY_KEY)return cityLabel(v);
+  if(col===NBHD_KEY)return nbhdLabel(v);
+  if(col==='P052')return ramotLabel(v);
+  return v;
+}
+
+async function loadData(){
+  if(!credsOK()){qs('cfg-warn').hidden=false;return}
+  clearAlert();
+  
+  try{
+    const folder=CONFIG.folder;
+    let found=[];
+
+    const setLoading=msg=>{
+      qs('city-grid').innerHTML=`<div class="empty"><div class="ico">⏳</div><p>${msg}</p></div>`;
+    };
+
+    // ── ניסיון 1: ApprovalAll.ymgr — קובץ הרשמות (רשומה אחת לכל מתקשר) ──
+    setLoading('מוריד ApprovalAll.ymgr…');
+    const approvalPath=`${folder}/ApprovalAll.ymgr`;
+    const approvalText=await downloadFile(approvalPath,12000);
+    if(approvalText&&approvalText.trim().length>5&&!approvalText.trim().startsWith('<')){
+      setLoading('מפרסר ApprovalAll.ymgr…');
+      const firstLines=approvalText.split('\n').slice(0,5).join('\n');
+      console.log('ApprovalAll.ymgr raw:\n'+firstLines);
+      window._rawSample=firstLines; // שמור לתצוגה
+      const recs=parseApprovalAll(approvalText);
+      if(recs.length){recs.forEach(r=>{r._path=approvalPath});found.push(...recs)}
+    }
+
+    // ── ניסיון 2: אם לא מצאנו — טען LogRecordingAndEnteringData.ymgr ──
+    if(!found.length){
+      setLoading('מוריד LogRecordingAndEnteringData.ymgr…');
+      const logPath=`${folder}/LogRecordingAndEnteringData.ymgr`;
+      const logText=await downloadFile(logPath,30000);
+      if(logText&&logText.trim().length>5){
+        setLoading('מפרסר נתוני Log…');
+        const recs=parseYMGR(logText);
+        if(recs.length){recs.forEach(r=>{r._path=logPath});found.push(...recs)}
+      }
+    }
+
+    // ── ניסיון 3: גלישת תיקייה ──
+    if(!found.length){
+      setLoading('מחפש קבצים בתיקייה…');
+      const{files}=await getDir(folder);
+      for(const f of files.filter(f=>f&&f.toLowerCase().endsWith('.ymgr'))){
+        setLoading(`מוריד ${f}…`);
+        const text=await downloadFile(`${folder}/${f}`);
+        if(text&&text.trim().length>5){
+          const recs=parseYMGR(text);
+          if(recs.length){recs.forEach(r=>{r._path=`${folder}/${f}`});found.push(...recs)}
+        }
+      }
+    }
+    if(!found.length){
+      showAlert('warning','לא נמצאו נתונים',`לא מצאנו קבצי YMGR בשלוחה ${folder}.`);
+      qs('city-grid').innerHTML='<div class="empty"><div class="ico">📭</div><p>אין נתונים</p></div>';
+      return;
+    }
+    const sample=found[0]||{};
+    const sampleKeys=Object.keys(sample);
+    console.log('שדות דגימה:',sampleKeys,'ערך ראשון:',JSON.stringify(sample));
+    // ApprovalAll.ymgr — כל רשומה כבר ייחודית (אחת לנרשם); רק ב-Log נייחד לפי טלפון
+    const isApproval=found[0]?._path?.toLowerCase().includes('approvalall');
+    if(isApproval){
+      _records=found; // כבר ייחודי
+    } else {
+      const phoneKey=r=>r['_phone']||r['Folder']||r['Phone']||r['phone']||r['DID']||r['IncomingDID']||'';
+      const byPhone=new Map();
+      for(const r of found){const p=phoneKey(r);if(p)byPhone.set(p,r);else byPhone.set(Symbol(),r)}
+      _records=[...byPhone.values()];
+    }
+    buildColumns(_records);
+    renderDashboard();
+  }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`}
+}
+
+function renderMiniPie(items,containerId){
+  const el=qs(containerId);if(!el)return;
+  const total=items.reduce((s,[,n])=>s+n,0);if(!total){el.innerHTML='';return}
+  const COLORS=['#2563EB','#7C3AED','#DB2777','#DC2626','#D97706','#059669','#0891B2','#4338CA','#BE185D','#92400E','#047857','#0E7490'];
+  const R=75,cx=90,cy=90,size=180;
+  let angle=-Math.PI/2,paths='',legendHtml='';
+  items.forEach(([name,count],i)=>{
+    const slice=count/total*Math.PI*2;
+    const x1=cx+R*Math.cos(angle),y1=cy+R*Math.sin(angle);
+    angle+=slice;
+    const x2=cx+R*Math.cos(angle),y2=cy+R*Math.sin(angle);
+    const large=slice>Math.PI?1:0;
+    const col=COLORS[i%COLORS.length];
+    paths+=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${large},1 ${x2},${y2} Z" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
+    const pct=Math.round(count/total*100);
+    legendHtml+=`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:5px">
+      <span style="width:11px;height:11px;border-radius:3px;background:${col};flex-shrink:0"></span>
+      <span style="font-weight:600">${esc(name)}</span>
+      <span style="color:var(--muted)">${count.toLocaleString('he')} (${pct}%)</span></div>`;
+  });
+  el.innerHTML=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="max-width:180px;flex-shrink:0">${paths}</svg><div>${legendHtml}</div>`;
+}
+function renderPieChart(cities){
+  if(!cities.length){qs('pie-section').hidden=true;return}
+  qs('pie-section').hidden=false;
+  renderMiniPie(cities,'pie-wrap');
+}
+
+function getCityCounts(recs){
+  const m={};
+  for(const r of recs){const c=cityLabel(r[CITY_KEY]);m[c]=(m[c]||0)+1}
+  return Object.entries(m).sort((a,b)=>b[1]-a[1])
+}
+function getNbhdCounts(recs){
+  const m={};
+  for(const r of recs){const n=nbhdLabel(r[NBHD_KEY]);m[n]=(m[n]||0)+1}
+  return Object.entries(m).sort((a,b)=>b[1]-a[1])
+}
+
+function renderDashboard(){
+  const allCities=getCityCounts(_records);
+  const cities=allCities.filter(([c])=>c!=='(לא ידוע)');
+  const unknownCount=allCities.find(([c])=>c==='(לא ידוע)')?.[1]||0;
+  const knownTotal=cities.reduce((s,[,n])=>s+n,0);
+  const total=_records.length;
+  qs('dash-meta').textContent=`${total.toLocaleString('he')} רשומות · ${cities.length} ערים (${knownTotal.toLocaleString('he')} עם נתוני עיר)`;
+  const maxN=cities[0]?.[1]||1;
+  let html=`<div class="city-card city-card-total" onclick="drillAll()" style="cursor:pointer">
+    <div class="city-count">${total.toLocaleString('he')}</div>
+    <div class="city-name">כל הרשומות</div>
+    ${unknownCount?`<div class="city-pct">${unknownCount.toLocaleString('he')} ללא עיר</div>`:''}
+  </div>`;
+  cities.forEach(([city,count],i)=>{
+    const pct=Math.round(count/knownTotal*100),fw=Math.round(count/maxN*100);
+    html+=`<div class="city-card ${COL_CLS[i%12]}" data-city="${esc(city)}" onclick="drillCity(this.dataset.city)">
+      <div class="city-count">${count.toLocaleString('he')}</div>
+      <div class="city-name">${esc(city)}</div>
+      <div class="city-pct">${pct}%</div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${fw}%"></div></div>
+    </div>`;
+  });
+  qs('city-grid').innerHTML=html;
+  renderPieChart(cities);
+}
+
+function drillCity(raw){
+  const city=raw.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');
+  _activeCity=city;_activeNbhd=null;_activeRamot=null;_drillPage=1;_drillSort=null;_drillSortAsc=true;
+  qs('ramot-section').hidden=true;
+  qs('search-in').value='';
+  const cityRecs=_records.filter(r=>cityLabel(r[CITY_KEY])===city);
+  qs('drill-title').textContent=city;
+  qs('drill-count').textContent=`${cityRecs.length.toLocaleString('he')} רשומות`;
+  const allNbhds=getNbhdCounts(cityRecs);
+  console.log('שכונות ל'+city+':', JSON.stringify(allNbhds));
+  console.log('דוגמת P051:', cityRecs.slice(0,5).map(r=>r['P051']));
+  const nbhds=allNbhds.filter(([n])=>n!=='(לא ידוע)');
+  if(nbhds.length>0){
+    qs('nbhd-meta').textContent=`${nbhds.length} שכונות · ${cityRecs.length.toLocaleString('he')} רשומות`;
+    const nbhdTotal=nbhds.reduce((s,[,n])=>s+n,0);
+    const maxN=nbhds[0]?.[1]||1;
+    // כרטיסי שכונות (כמו כרטיסי ערים)
+    let html=`<div class="city-card city-card-total" style="cursor:pointer" data-nbhd="" onclick="filterNbhd(null)">
+      <div class="city-count">${cityRecs.length.toLocaleString('he')}</div>
+      <div class="city-name">הכל</div></div>`;
+    nbhds.forEach(([n,c],i)=>{
+      const pct=Math.round(c/nbhdTotal*100),fw=Math.round(c/maxN*100);
+      html+=`<div class="city-card ${COL_CLS[i%12]}" data-nbhd="${esc(n)}" onclick="filterNbhd(this.dataset.nbhd)">
+        <div class="city-count">${c.toLocaleString('he')}</div>
+        <div class="city-name">${esc(n)}</div>
+        <div class="city-pct">${pct}%</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${fw}%"></div></div>
+      </div>`;
+    });
+    qs('nbhd-grid').innerHTML=html;
+    // עוגת שכונות
+    renderMiniPie(nbhds,'nbhd-pie-wrap');
+    qs('nbhd-section').hidden=false;
+  }else{qs('nbhd-section').hidden=true}
+  qs('view-dashboard').hidden=true;qs('view-city').hidden=false;
+  applyDrillFilter();
+}
+function filterNbhd(nbhd){
+  _activeNbhd=nbhd||null;_activeRamot=null;_drillPage=1;
+  qs('nbhd-grid').querySelectorAll('.city-card').forEach(el=>{
+    const isAll=el.dataset.nbhd==='';
+    const match=nbhd?el.dataset.nbhd===nbhd:isAll;
+    el.style.outline=match?'3px solid rgba(255,255,255,.7)':'';
+    el.style.opacity=match?'1':'0.7';
+  });
+  // פילוח בתוך רמות אם בחרו רמות
+  if(nbhd==='רמות'){
+    const cityBase=_activeCity==='__all__'?_records:_records.filter(r=>cityLabel(r[CITY_KEY])===_activeCity);
+    const ramotRecs=cityBase.filter(r=>nbhdLabel(r[NBHD_KEY])===nbhd);
+    const ramotCounts=getRamotCounts(ramotRecs);
+    const knownRamot=ramotCounts.filter(([n])=>n!=='(לא ידוע)');
+    if(knownRamot.length){
+      const ramotTotal=knownRamot.reduce((s,[,n])=>s+n,0);
+      const unknownRamot=ramotRecs.length-ramotTotal;
+      qs('ramot-meta').textContent=`${knownRamot.length} חלקים · ${ramotRecs.length.toLocaleString('he')} רשומות`;
+      const maxN=knownRamot[0]?.[1]||1;
+      let html=`<div class="city-card city-card-total" style="cursor:pointer" data-ramot="" onclick="filterRamot(null)">
+        <div class="city-count">${ramotRecs.length.toLocaleString('he')}</div>
+        <div class="city-name">כל רמות</div>
+        ${unknownRamot?`<div class="city-pct">${unknownRamot} ללא פרוט</div>`:''}
+        </div>`;
+      knownRamot.forEach(([n,c],i)=>{
+        const pct=Math.round(c/ramotTotal*100),fw=Math.round(c/maxN*100);
+        html+=`<div class="city-card ${COL_CLS[(i+5)%12]}" data-ramot="${esc(n)}" onclick="filterRamot(this.dataset.ramot)">
+          <div class="city-count">${c.toLocaleString('he')}</div>
+          <div class="city-name">${esc(n)}</div>
+          <div class="city-pct">${pct}%</div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${fw}%"></div></div>
+        </div>`;
+      });
+      qs('ramot-grid').innerHTML=html;
+      renderMiniPie(knownRamot,'ramot-pie-wrap');
+      qs('ramot-section').hidden=false;
+    }else{qs('ramot-section').hidden=true}
+  }else{qs('ramot-section').hidden=true}
+  applyDrillFilter();
+}
+let _activeRamot=null;
+function getRamotCounts(recs){
+  const m={};
+  for(const r of recs){const n=ramotLabel(r['P052'])||'(לא ידוע)';m[n]=(m[n]||0)+1}
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+function filterRamot(ramot){
+  _activeRamot=ramot||null;
+  _activeNbhd='רמות'; // תמיד בתוך שכונת רמות
+  _drillPage=1;
+  qs('ramot-grid').querySelectorAll('.city-card').forEach(el=>{
+    const isAll=el.dataset.ramot==='';
+    const match=ramot?el.dataset.ramot===ramot:isAll;
+    el.style.outline=match?'3px solid rgba(255,255,255,.7)':'';
+    el.style.opacity=match?'1':'0.7';
+  });
+  applyDrillFilter();
+}
+function applyDrillFilter(){
+  let base=_activeCity==='__all__'?_records:_records.filter(r=>cityLabel(r[CITY_KEY])===_activeCity);
+  if(_activeNbhd)base=base.filter(r=>nbhdLabel(r[NBHD_KEY])===_activeNbhd);
+  if(_activeRamot)base=base.filter(r=>ramotLabel(r['P052'])===_activeRamot);
+  const q=(qs('search-in').value||'').toLowerCase();
+  _drillFiltered=q?base.filter(r=>_columns.some(c=>String(cellVal(r,c)).toLowerCase().includes(q))):base;
+  renderDrillTable();
+}
+function renderDrillTable(){
+  let rows=[..._drillFiltered];
+  if(_drillSort)rows.sort((a,b)=>{
+    const av=cellVal(a,_drillSort),bv=cellVal(b,_drillSort);
+    const c=av<bv?-1:av>bv?1:0;return _drillSortAsc?c:-c
+  });
+  const total=rows.length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  _drillPage=Math.max(1,Math.min(_drillPage,pages));
+  const start=(_drillPage-1)*PAGE_SIZE,pageRows=rows.slice(start,start+PAGE_SIZE);
+  qs('drill-thead').innerHTML='<tr><th class="idx" style="width:36px">#</th>'+
+    _columns.map(c=>{const s=_drillSort===c;return`<th class="${s?'sorted':''}" onclick="sortDrill('${c.replace(/'/g,"\\'")}')">
+      ${esc(colLabel(c))}<span class="sort-ico">${s?(_drillSortAsc?'▲':'▼'):'⇅'}</span></th>`}).join('')+'</tr>';
+  qs('drill-tbody').innerHTML=pageRows.length
+    ?pageRows.map((r,i)=>`<tr><td class="idx" data-label="#">${start+i+1}</td>${_columns.map(c=>{
+        const v=cellVal(r,c);
+        const cls=(c.toLowerCase().includes('phone')||c==='Folder')?'phone':'';
+        return`<td class="${cls}" data-label="${esc(colLabel(c))}">${esc(v)}</td>`
+      }).join('')}</tr>`).join('')
+    :`<tr><td colspan="${_columns.length+1}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
+  qs('list-info').textContent=`${total.toLocaleString('he')} רשומות`;
+  qs('page-info').textContent=`עמוד ${_drillPage} / ${pages}`;
+  const b=[`<button onclick="goPage(${_drillPage-1})" ${_drillPage<=1?'disabled':''}>›</button>`];
+  const lo=Math.max(1,_drillPage-3),hi=Math.min(pages,_drillPage+3);
+  if(lo>1)b.push(`<button onclick="goPage(1)">1</button>`);
+  if(lo>2)b.push(`<button disabled>…</button>`);
+  for(let i=lo;i<=hi;i++)b.push(`<button class="${i===_drillPage?'active':''}" onclick="goPage(${i})">${i}</button>`);
+  if(hi<pages-1)b.push(`<button disabled>…</button>`);
+  if(hi<pages)b.push(`<button onclick="goPage(${pages})">${pages}</button>`);
+  b.push(`<button onclick="goPage(${_drillPage+1})" ${_drillPage>=pages?'disabled':''}>‹</button>`);
+  qs('page-btns').innerHTML=b.join('');
+}
+function goPage(p){_drillPage=p;renderDrillTable()}
+function sortDrill(col){if(_drillSort===col)_drillSortAsc=!_drillSortAsc;else{_drillSort=col;_drillSortAsc=true}renderDrillTable()}
+function drillAll(){
+  _activeCity='__all__';_activeNbhd=null;_activeRamot=null;_drillPage=1;_drillSort=null;_drillSortAsc=true;
+  qs('search-in').value='';
+  qs('drill-title').textContent='כל הרשומות';
+  qs('drill-count').textContent=`${_records.length.toLocaleString('he')} רשומות`;
+  qs('nbhd-section').hidden=true;
+  qs('ramot-section').hidden=true;
+  qs('view-dashboard').hidden=true;qs('view-city').hidden=false;
+  _drillFiltered=_records;renderDrillTable();
+}
+function backToDash(){_activeCity=null;_activeNbhd=null;qs('view-city').hidden=true;qs('view-dashboard').hidden=false}
+
+function exportCSV(){
+  const e2=v=>'"'+String(v).replace(/"/g,'""')+'"';
+  const hdrs=_columns.map(c=>colLabel(c));
+  const csv=[hdrs.map(c=>e2(c)).join(','),..._drillFiltered.map(r=>_columns.map(c=>e2(cellVal(r,c))).join(','))].join('\n');
+  try{navigator.clipboard.writeText(csv).then(()=>showAlert('success','CSV הועתק ללוח',`${_drillFiltered.length} שורות — הדבק ב-Excel`),()=>fbCopy(csv))}catch{fbCopy(csv)}
+}
+function fbCopy(csv){const ta=document.createElement('textarea');ta.value=csv;ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');showAlert('success','CSV הועתק ללוח','')}catch{showAlert('info','לא הצליח','')}document.body.removeChild(ta)}
+
+function updateRing(){
+  const r=qs('ring-fg');
+  if(r)r.style.strokeDashoffset=_paused?75.4:75.4*(1-_cdCount/CONFIG.refreshSec);
+  const n=qs('cd-num');if(n)n.textContent=_paused?'—':_cdCount;
+}
+function togglePause(){
+  _paused=!_paused;
+  const btn=qs('btn-pause');
+  const lbl=qs('refresh-label');
+  if(_paused){
+    btn.textContent='▶ המשך';
+    if(lbl)lbl.innerHTML='<b>מושהה</b>';
+  } else {
+    btn.textContent='⏸ השהה';
+    if(lbl)lbl.innerHTML=`ריענון עוד <b id="cd-num">${_cdCount}</b> שנ'`;
+    _cdCount=CONFIG.refreshSec;
+  }
+  updateRing();
+}
+function saveState(){
+  return{city:_activeCity,nbhd:_activeNbhd,ramot:_activeRamot,
+    q:qs('search-in')?qs('search-in').value:'',
+    sort:_drillSort,sortAsc:_drillSortAsc,page:_drillPage};
+}
+async function restoreState(s){
+  if(!s||!s.city)return;
+  if(s.city==='__all__'){drillAll();}
+  else{drillCity(s.city);}
+  if(s.nbhd){filterNbhd(s.nbhd);}
+  if(s.ramot){filterRamot(s.ramot);}
+  if(s.q&&qs('search-in')){qs('search-in').value=s.q;}
+  if(s.sort){_drillSort=s.sort;_drillSortAsc=s.sortAsc;}
+  _drillPage=s.page||1;
+  applyDrillFilter();
+}
+function startTimer(){
+  _cdCount=CONFIG.refreshSec;updateRing();clearInterval(_timerInterval);
+  _timerInterval=setInterval(async()=>{
+    if(_paused)return;
+    _cdCount--;if(_cdCount<=0){_cdCount=CONFIG.refreshSec;const st=saveState();await loadData();await restoreState(st);}
+    updateRing();
+  },1000);
+}
+async function manualRefresh(){_cdCount=CONFIG.refreshSec;updateRing();const st=saveState();await loadData();await restoreState(st);}
+
+(async function(){
+  if(!credsOK()){qs('cfg-warn').hidden=false;return}
+  await loadData();startTimer();
+})();
+</script>
+</body>
+</html>
