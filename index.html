@@ -102,7 +102,8 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
 :root[data-theme="dark"] mark,:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}}
-/* ══════════ Toast ══════════ */.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
+/* ══════════ Toast ══════════ */[hidden]{display:none!important}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;
   display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;
   font-size:14px;font-weight:600;box-shadow:0 4px 24px rgba(0,0,0,.2);white-space:nowrap;max-width:90vw}
 .toast-success{background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
@@ -226,7 +227,7 @@ const CONFIG={
   sysNum:   '033050999',
   password: '556778',
   folder:   '2/1',     // שלוחה
-  refreshSec: 60
+  refreshSec: 59
 };
 // ════════════════════════════════════════════
 // מיפוי שדות מ-ApprovalAll.ini
