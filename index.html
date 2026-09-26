@@ -154,6 +154,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   #ramot-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -225,7 +226,7 @@ const CONFIG={
   sysNum:   '033050999',
   password: '556778',
   folder:   '2/1',     // שלוחה
-  refreshSec: 10
+  refreshSec: 30
 };
 // ════════════════════════════════════════════
 // מיפוי שדות מ-ApprovalAll.ini
@@ -260,6 +261,7 @@ const CITY_KEY='P050';
 const NBHD_KEY='P051';
 let _activeCity=null,_activeNbhd=null,_drillFiltered=[],_drillPage=1;
 let _drillSort=null,_drillSortAsc=true,_timerInterval=null,_cdCount=CONFIG.refreshSec,_paused=false;
+let _prevCount=null; // לזיהוי שינויים בין רענונים
 const PAGE_SIZE=50;
 const COL_CLS=['cc0','cc1','cc2','cc3','cc4','cc5','cc6','cc7','cc8','cc9','cc10','cc11'];
 
@@ -486,6 +488,12 @@ async function loadData(){
       _records=[...byPhone.values()];
     }
     buildColumns(_records);
+    // התראה על רשומות חדשות
+    if(_prevCount!==null&&_records.length>_prevCount){
+      const diff=_records.length-_prevCount;
+      showAlert('success',`נוספו ${diff} נרשמים חדשים!`,`סה"כ כעת: ${_records.length.toLocaleString('he')}`);
+    }
+    _prevCount=_records.length;
     renderDashboard();
   }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`}
 }
