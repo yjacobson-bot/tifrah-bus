@@ -1038,7 +1038,7 @@ function updateExportBtn(){
   const btn=document.getElementById('export-btn');
   if(!btn)return;
   const count=_drillFiltered?_drillFiltered.length:0;
-  if(_activeCity){
+  if(_activeCity&&_activeCity!=='__all__'){
     const label=_activeNbhd?`${_activeCity} / ${_activeNbhd}`:_activeCity;
     btn.textContent=`⬇ Excel — ${label} (${count})`;
   } else {
