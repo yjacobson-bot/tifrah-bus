@@ -917,7 +917,8 @@ async function adminLoadExtTime(){
 // הגדרת זמן ב-ext.ini
 async function adminSetTime(){
   const dtVal=qs('admin-dt').value;
-  if(!dtVal){adminMsg('בחר תאריך ושעה תחילה','#92400E');return}
+  if(!dtVal){adminMsg('⚠️ בחר תאריך ושעה תחילה','#92400E');return}
+  adminMsg('⏳ מעבד…','#92400E');
   // המרה לפורמט: 2026-09-26-22-30-00
   const [date,time]=dtVal.split('T');
   const [h,m]=time.split(':');
@@ -927,6 +928,7 @@ async function adminSetTime(){
 
 // הסרת מגבלת זמן מ-ext.ini
 async function adminRemoveTime(){
+  adminMsg('⏳ מעבד…','#92400E');
   await adminUpdateExtIni(null);
 }
 
@@ -1028,7 +1030,7 @@ function toggleTheme(){
 </script>
 <!-- ═══════════ ADMIN MODAL ═══════════ -->
 <div id="admin-overlay" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeAdmin()">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:420px;padding:28px 24px;direction:rtl;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:420px;padding:28px 24px;direction:rtl;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:90vh;overflow-y:auto">
     <!-- כותרת -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <h2 style="margin:0;font-size:18px;font-weight:800">⚙️ פאנל מנהל</h2>
@@ -1079,7 +1081,7 @@ function toggleTheme(){
         </div>
       </div>
 
-      <p id="admin-status" hidden style="font-size:13px;margin:12px 0 0;text-align:center;font-weight:600"></p>
+      <div id="admin-status" hidden style="font-size:14px;margin:12px 0 0;padding:10px 14px;border-radius:8px;background:var(--g100);font-weight:600;text-align:center"></div>
     </div>
   </div>
 </div>
