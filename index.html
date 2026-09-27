@@ -103,6 +103,10 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .pager-btns button:disabled{opacity:.3;cursor:not-allowed}
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty .ico{font-size:40px;margin-bottom:8px}
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:18px}
+.loading-logo{width:72px;height:72px;object-fit:contain;animation:spin-logo 1.4s cubic-bezier(.6,0,.4,1) infinite}
+@keyframes spin-logo{0%{transform:rotate(0deg) scale(1)}40%{transform:rotate(180deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}
+.loading-text{font-size:15px;color:var(--muted);font-weight:500;letter-spacing:.03em}
 /* ══════════ הדגשת חיפוש ══════════ */
 mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
 :root[data-theme="dark"] mark,:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}
@@ -468,8 +472,9 @@ async function loadData(){
     const folder=CONFIG.folder;
     let found=[];
 
+    const _LOGO_SRC=document.querySelector('#top-bar img')?.src||'';
     const setLoading=msg=>{
-      qs('city-grid').innerHTML=`<div class="empty"><div class="ico">⏳</div><p>${msg}</p></div>`;
+      qs('city-grid').innerHTML=`<div class="loading-wrap"><img class="loading-logo" src="${_LOGO_SRC}" alt=""><p class="loading-text">טוען נתונים…</p></div>`;
     };
 
     // ── ניסיון 1: ApprovalAll.ymgr — קובץ הרשמות (רשומה אחת לכל מתקשר) ──
