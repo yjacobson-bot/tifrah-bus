@@ -984,23 +984,23 @@ async function adminBackupAndReset(){
   await adminDoReset();
 }
 
-// איפוס רישום — מחיקת ApprovalAll.ymgr
+// איפוס רישום — מחיקת ApprovalAll.ymgr באמצעות FileAction
 async function adminDoReset(){
   let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
   if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
   adminMsg('מוחק…','#92400E');
   const filePath=`ivr2:${CONFIG.folder}/ApprovalAll.ymgr`;
   try{
-    const r=await fetch(`${API}DeleteFile?token=${tok}&path=${filePath}`);
+    const r=await fetch(`${API}FileAction?token=${tok}&action=delete&what=${encodeURIComponent(filePath)}`);
     const t=await r.text();
-    if(t.includes('responsetype=OK')||t.includes('"responseStatus":"OK"')||t.includes('OK')){
+    const ok=t.includes('"success":true')||t.includes('responsetype=OK');
+    if(ok){
       adminMsg('✅ הרשימה נמחקה! רישום חדש יתחיל כשמישהו יירשם.','#166534');
       qs('admin-reset-confirm').hidden=true;
       _prevCount=null; _records=[];
       renderDashboard();
     } else {
-      // מחיקה נכשלה — הצג הנחיה ברורה על המסך
-      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק את הקובץ ApprovalAll.ymgr מתיקייה ${CONFIG.folder}`);
+      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק את הקובץ ApprovalAll.ymgr מתיקייה ${CONFIG.folder} | תגובה: ${t.slice(0,120)}`);
     }
   }catch(e){showAlert('error','שגיאת רשת',e.message)}
 }
