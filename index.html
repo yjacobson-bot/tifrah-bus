@@ -991,7 +991,7 @@ async function adminDoReset(){
   adminMsg('מוחק…','#92400E');
   const filePath=`ivr2:${CONFIG.folder}/ApprovalAll.ymgr`;
   try{
-    const r=await fetch(`${API}FileAction?token=${tok}&action=delete&what=${encodeURIComponent(filePath)}`);
+    const r=await fetch(`${API}FileAction?token=${tok}&action=delete&what=${filePath}`);
     const t=await r.text();
     const ok=t.includes('"success":true')||t.includes('responsetype=OK');
     if(ok){
@@ -1000,7 +1000,8 @@ async function adminDoReset(){
       _prevCount=null; _records=[];
       renderDashboard();
     } else {
-      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק את הקובץ ApprovalAll.ymgr מתיקייה ${CONFIG.folder} | תגובה: ${t.slice(0,120)}`);
+      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק את הקובץ ApprovalAll.ymgr מתיקייה ${CONFIG.folder}`);
+      console.error('FileAction delete response:',t);
     }
   }catch(e){showAlert('error','שגיאת רשת',e.message)}
 }
