@@ -1240,7 +1240,29 @@ async function adminSetStartTime(){
   if(!dtVal){adminMsg('⚠️ בחר תאריך ושעה תחילה','#92400E');return}
   adminMsg('⏳ מעבד…','#92400E');
   const [date,time]=dtVal.split('T');const [h,m]=time.split(':');
+  const openTime=new Date(dtVal);
+  // שמור שעת פתיחה
   await adminUpdateExtIniLine('enter_after_time',`${date}-${h}-${m}-00`);
+  // בדוק שעת סגירה — אם עברה ולפני שעת הפתיחה, בטל אותה
+  try{
+    const tok=await ensureToken();
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    if(r.ok){
+      const txt=await r.text();
+      const endM=txt.match(/^enter_foldar_end_time=(.+)$/m);
+      if(endM){
+        const endTime=parseYmTime(endM[1]);
+        const now=new Date();
+        // אם שעת הסגירה עברה וגם לפני שעת הפתיחה — בטל אותה
+        if(endTime&&endTime<now&&endTime<openTime){
+          await adminUpdateExtIniLine('enter_foldar_end_time',null);
+          adminMsg('✅ שעת פתיחה הוגדרה; שעת סגירה מהעבר בוטלה','#166534');
+          adminLoadExtTime();return;
+        }
+      }
+    }
+  }catch{}
+  adminLoadExtTime();
 }
 async function adminRemoveStartTime(){
   adminMsg('⏳ מעבד…','#92400E');
