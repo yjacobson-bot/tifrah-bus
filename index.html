@@ -575,8 +575,8 @@ function renderDashboard(){
     const pct=Math.round(count/knownTotal*1000)/10,fw=Math.round(count/maxN*100);
     const fullBuses=Math.floor(count/55),remainder=count%55;
     const busLine=remainder>0
-      ?`<span style="font-weight:700">🚌 ${fullBuses}</span> <span style="opacity:.6;font-size:11px">+ ${remainder} נוספים</span>`
-      :`<span style="font-weight:700">🚌 ${fullBuses}</span>`;
+      ?`<span style="font-weight:700">🚌 ${fullBuses} אוטובוס${fullBuses!==1?'ים':''}</span> <span style="opacity:.6;font-size:11px">+ ${remainder} נוספים</span>`
+      :`<span style="font-weight:700">🚌 ${fullBuses} אוטובוס${fullBuses!==1?'ים':''}</span>`;
     html+=`<div class="city-card ${COL_CLS[i%12]}" data-city="${esc(city)}" onclick="drillCity(this.dataset.city)">
       <div class="city-count">${count.toLocaleString('he')}</div>
       <div class="city-name">${esc(city)}</div>
