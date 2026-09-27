@@ -171,7 +171,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <button class="btn-refresh" onclick="manualRefresh()">🔄 רענן</button>
       </div>
     </div>
-    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button></div>
+    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button><button class="btn-refresh" onclick="openAdmin()" title="פאנל מנהל">⚙️</button></div>
   </div>
 </header>
 
@@ -212,7 +212,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div class="search-row">
         <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
-        <button class="btn-export" onclick="exportCSV()">⬇ ייצא CSV</button>
+        <button class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
       </div>
       <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
       <div class="pager"><span id="page-info"></span><div class="pager-btns" id="page-btns"></div></div>
@@ -799,6 +799,174 @@ function startTimer(){
 }
 async function manualRefresh(){_cdCount=CONFIG.refreshSec;updateRing();const st=saveState();await loadData();await restoreState(st);}
 
+// ══════════════════════════════════════════════
+// פאנל מנהל
+// ══════════════════════════════════════════════
+const _ap='תפרח'; // תפרח
+function openAdmin(){
+  qs('admin-overlay').hidden=false;
+  qs('admin-login').hidden=false;
+  qs('admin-panel').hidden=true;
+  qs('admin-pwd-input').value='';
+  qs('admin-err').hidden=true;
+  setTimeout(()=>qs('admin-pwd-input').focus(),100);
+}
+function closeAdmin(){qs('admin-overlay').hidden=true}
+function adminLogin(){
+  if(qs('admin-pwd-input').value===_ap){
+    qs('admin-login').hidden=true;
+    qs('admin-panel').hidden=false;
+    qs('admin-reset-confirm').hidden=true;
+    adminLoadExtTime();
+  } else {
+    qs('admin-err').hidden=false;
+    qs('admin-pwd-input').value='';
+    qs('admin-pwd-input').focus();
+  }
+}
+
+// איפוס רישום — מחיקת ApprovalAll.ymgr
+async function adminDoReset(){
+  const tok=await getToken();if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
+  adminMsg('מוחק…','#92400E');
+  try{
+    const r=await fetch(`${API}DeleteFile?token=${tok}&path=ivr2:${CONFIG.folder}/ApprovalAll.ymgr`);
+    const t=await r.text();
+    if(t.includes('responsetype=OK')||t.includes('OK')){
+      adminMsg('✅ הרשימה נמחקה בהצלחה! רישום חדש יתחיל כשמישהו יירשם.','#166534');
+      qs('admin-reset-confirm').hidden=true;
+      _prevCount=null; _records=[];
+    } else {
+      adminMsg('שגיאה במחיקה: '+t,'#991B1B');
+    }
+  }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
+}
+
+// טעינת הגדרת זמן נוכחית מ-ext.ini
+async function adminLoadExtTime(){
+  const tok=await getToken();if(!tok)return;
+  try{
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    if(!r.ok)return;
+    const txt=await r.text();
+    // מחפשים שורה (אפשר עם ; בהתחלה)
+    const m=txt.match(/^;?\s*enter_foldar_end_time=(.+)$/m);
+    const active=txt.match(/^enter_foldar_end_time=(.+)$/m); // ללא ;
+    const div=qs('admin-cur-time');
+    if(m){
+      const val=m[1].trim();
+      const isActive=!!active;
+      div.innerHTML=isActive
+        ?`⏰ מגבלה פעילה: <strong>${val.replace(/-/g,'-')}</strong>`
+        :`מגבלה מוגדרת אך מושבתת (עם ;): <strong>${val}</strong>`;
+      div.hidden=false;
+      // מלא את ה-input עם הערך הנוכחי
+      if(isActive){
+        const parts=val.split('-'); // [YYYY,MM,DD,HH,MM,SS]
+        if(parts.length>=5){
+          qs('admin-dt').value=`${parts[0]}-${parts[1]}-${parts[2]}T${parts[3]}:${parts[4]}`;
+        }
+      }
+    } else {
+      div.hidden=true;
+    }
+  }catch{}
+}
+
+// הגדרת זמן ב-ext.ini
+async function adminSetTime(){
+  const dtVal=qs('admin-dt').value;
+  if(!dtVal){adminMsg('בחר תאריך ושעה תחילה','#92400E');return}
+  // המרה לפורמט: 2026-09-26-22-30-00
+  const [date,time]=dtVal.split('T');
+  const [h,m]=time.split(':');
+  const ymgr=`${date}-${h}-${m}-00`;
+  await adminUpdateExtIni(ymgr);
+}
+
+// הסרת מגבלת זמן מ-ext.ini
+async function adminRemoveTime(){
+  await adminUpdateExtIni(null);
+}
+
+// עדכון ext.ini — רק שורת enter_foldar_end_time, הכל אחר נשאר שלם
+async function adminUpdateExtIni(newVal){
+  const tok=await getToken();if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
+  adminMsg('מוריד ext.ini…','#92400E');
+  try{
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    let txt=r.ok?await r.text():'';
+
+    // מטפלים בשורה — אחד מ-3 מצבים:
+    // 1. שורה פעילה: enter_foldar_end_time=...
+    // 2. שורה מושבתת: ;enter_foldar_end_time=...
+    // 3. לא קיימת בכלל
+    const hasActive=/^enter_foldar_end_time=.+$/m.test(txt);
+    const hasComment=/^;enter_foldar_end_time=.+$/m.test(txt);
+
+    if(newVal){
+      const newLine=`enter_foldar_end_time=${newVal}`;
+      if(hasActive){
+        txt=txt.replace(/^enter_foldar_end_time=.+$/m,newLine);
+      } else if(hasComment){
+        // פעיל — מסיר את ה-; ומעדכן
+        txt=txt.replace(/^;enter_foldar_end_time=.+$/m,newLine);
+      } else {
+        // לא קיים — מוסיף אחרי השורה הראשונה
+        const lines=txt.split('\n');
+        lines.splice(1,0,newLine);
+        txt=lines.join('\n');
+      }
+    } else {
+      // הסרה — מגבלה: מסמן עם ;
+      if(hasActive){
+        txt=txt.replace(/^(enter_foldar_end_time=.+)$/m,';$1');
+      } else if(hasComment){
+        adminMsg('המגבלה כבר מושבתת','#166534');return;
+      } else {
+        adminMsg('לא נמצאה מגבלה להסיר','#92400E');return;
+      }
+    }
+
+    // העלאה בחזרה
+    adminMsg('מעלה ext.ini…','#92400E');
+    const form=new FormData();
+    form.append('file',new Blob([txt],{type:'text/plain'}),'ext.ini');
+    const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{method:'POST',body:form});
+    const upTxt=await up.text();
+    if(upTxt.includes('OK')){
+      adminMsg(newVal?`✅ מגבלה הוגדרת: ${newVal}`:'✅ המגבלה הוסרה','#166534');
+      adminLoadExtTime();
+    } else {
+      adminMsg('שגיאה בהעלאה: '+upTxt,'#991B1B');
+    }
+  }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
+}
+
+function adminMsg(msg,color){
+  const el=qs('admin-status');
+  el.textContent=msg;el.style.color=color;el.hidden=false;
+}
+
+// ══════════════════════════════════════════════
+// ייצוא אקסל אמיתי
+// ══════════════════════════════════════════════
+function exportExcel(){
+  if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
+  try{
+    const hdrs=_columns.map(c=>colLabel(c));
+    const rows=_drillFiltered.map(r=>_columns.map(c=>cellVal(r,c)));
+    const ws=XLSX.utils.aoa_to_sheet([hdrs,...rows]);
+    // כיוון RTL
+    ws['!cols']=_columns.map(()=>({wch:18}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'בחורים');
+    const fname=`תפרח_רישום_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.xlsx`;
+    XLSX.writeFile(wb,fname);
+    showAlert('success','קובץ אקסל הורד',fname);
+  }catch(e){showAlert('error','שגיאה בייצוא',e.message)}
+}
+
 function toggleTheme(){
   const root=document.documentElement;
   const cur=root.getAttribute('data-theme');
@@ -815,6 +983,60 @@ function toggleTheme(){
   await loadData();startTimer();
 })();
 </script>
+<!-- ═══════════ ADMIN MODAL ═══════════ -->
+<div id="admin-overlay" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeAdmin()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:420px;padding:28px 24px;direction:rtl;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+    <!-- כותרת -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="margin:0;font-size:18px;font-weight:800">⚙️ פאנל מנהל</h2>
+      <button onclick="closeAdmin()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1">×</button>
+    </div>
+
+    <!-- מסך כניסה -->
+    <div id="admin-login">
+      <p style="font-size:14px;color:var(--muted);margin:0 0 14px">הזן סיסמת מנהל להמשך</p>
+      <input id="admin-pwd-input" type="password" placeholder="סיסמא" onkeydown="if(event.key==='Enter')adminLogin()"
+        style="width:100%;height:42px;padding:0 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-family:inherit;font-size:15px;direction:rtl;outline:none;box-sizing:border-box">
+      <button onclick="adminLogin()" style="margin-top:12px;width:100%;height:42px;background:#2563EB;color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer">כניסה</button>
+      <p id="admin-err" hidden style="color:#991B1B;font-size:13px;margin:8px 0 0;text-align:center">סיסמא שגויה</p>
+    </div>
+
+    <!-- פאנל אחרי כניסה -->
+    <div id="admin-panel" hidden>
+
+      <!-- איפוס רישום -->
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">🗑️ איפוס רשימת בחורים</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px">מחיקת קובץ הרשומות מהשלוחה — הרישום יתחיל מחדש מאפס.</p>
+        <div id="admin-reset-confirm" hidden style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px;color:#991B1B">
+          <strong>בטוח?</strong> פעולה זו לא הפיכה! כל הרשומות יימחקו.
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button onclick="adminDoReset()" style="flex:1;height:36px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">כן, מחק הכל</button>
+            <button onclick="qs('admin-reset-confirm').hidden=true" style="flex:1;height:36px;background:var(--g100);border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
+          </div>
+        </div>
+        <button onclick="qs('admin-reset-confirm').hidden=false" style="width:100%;height:38px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">מחק רשימת בחורים</button>
+      </div>
+
+      <!-- הגבלת זמן -->
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">⏰ הגבלת זמן רישום</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">הגדר שעת סגירה לשלוחה (<code>enter_foldar_end_time</code> ב-ext.ini)</p>
+        <div id="admin-cur-time" hidden style="background:var(--amber-bg);color:#92400E;border:1px solid #FCD34D;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px"></div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">תאריך ושעת סגירה:</label>
+        <input id="admin-dt" type="datetime-local"
+          style="width:100%;height:40px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;direction:ltr;box-sizing:border-box;outline:none">
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="adminSetTime()" style="flex:1;height:38px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">הגדר מגבלה</button>
+          <button onclick="adminRemoveTime()" style="flex:1;height:38px;background:var(--g100);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px">הסר מגבלה</button>
+        </div>
+      </div>
+
+      <p id="admin-status" hidden style="font-size:13px;margin:12px 0 0;text-align:center;font-weight:600"></p>
+    </div>
+  </div>
+</div>
+
 <footer style="background:var(--navy);color:rgba(255,255,255,.7);text-align:center;padding:14px 16px;font-size:13px;margin-top:8px">
   כל הזכויות שמורות &copy; יצחק &nbsp;|&nbsp; לפרטים: <a href="tel:0548565906" style="color:rgba(255,255,255,.9);text-decoration:none;font-weight:600">054-856-5906</a>
 </footer>
