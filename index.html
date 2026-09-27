@@ -208,7 +208,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div id="ramot-pie-wrap" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap"></div>
     </div>
     <div class="section">
-      <div class="section-head"><span class="section-title">רשימת רשומות</span></div>
+      <div class="section-head"><span class="section-title">רשימת בחורים</span></div>
       <div class="search-row">
         <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
@@ -488,7 +488,7 @@ async function loadData(){
       _records=[...byPhone.values()];
     }
     buildColumns(_records);
-    // התראה על רשומות חדשות
+    // התראה על בחורים חדשות
     if(_prevCount!==null&&_records.length>_prevCount){
       const diff=_records.length-_prevCount;
       const newRecs=_records.slice(-diff);
@@ -562,11 +562,11 @@ function renderDashboard(){
   const knownTotal=cities.reduce((s,[,n])=>s+n,0);
   const total=_records.length;
   const busTotal=Math.ceil(total/55);
-  qs('dash-meta').textContent=`${total.toLocaleString('he')} רשומות · ${cities.length} ערים · 🚌 ${busTotal} אוטובוסים סה"כ`;
+  qs('dash-meta').textContent=`${total.toLocaleString('he')} בחורים · ${cities.length} ערים · 🚌 ${busTotal} אוטובוסים סה"כ`;
   const maxN=cities[0]?.[1]||1;
   let html=`<div class="city-card city-card-total" onclick="drillAll()" style="cursor:pointer">
     <div class="city-count">${total.toLocaleString('he')}</div>
-    <div class="city-name">כל הרשומות</div>
+    <div class="city-name">כל הבחורים</div>
     ${unknownCount?`<div class="city-pct">${unknownCount.toLocaleString('he')} ללא עיר</div>`:''}
   </div>`;
   const totalBuses=Math.ceil(knownTotal/55);
@@ -592,13 +592,13 @@ function drillCity(raw){
   qs('search-in').value='';
   const cityRecs=_records.filter(r=>cityLabel(r[CITY_KEY])===city);
   qs('drill-title').textContent=city;
-  qs('drill-count').textContent=`${cityRecs.length.toLocaleString('he')} רשומות`;
+  qs('drill-count').textContent=`${cityRecs.length.toLocaleString('he')} בחורים`;
   const allNbhds=getNbhdCounts(cityRecs);
   console.log('שכונות ל'+city+':', JSON.stringify(allNbhds));
   console.log('דוגמת P051:', cityRecs.slice(0,5).map(r=>r['P051']));
   const nbhds=allNbhds.filter(([n])=>n!=='(לא ידוע)');
   if(nbhds.length>0){
-    qs('nbhd-meta').textContent=`${nbhds.length} שכונות · ${cityRecs.length.toLocaleString('he')} רשומות`;
+    qs('nbhd-meta').textContent=`${nbhds.length} שכונות · ${cityRecs.length.toLocaleString('he')} בחורים`;
     const nbhdTotal=nbhds.reduce((s,[,n])=>s+n,0);
     const maxN=nbhds[0]?.[1]||1;
     // כרטיסי שכונות (כמו כרטיסי ערים)
@@ -639,7 +639,7 @@ function filterNbhd(nbhd){
     if(knownRamot.length){
       const ramotTotal=knownRamot.reduce((s,[,n])=>s+n,0);
       const unknownRamot=ramotRecs.length-ramotTotal;
-      qs('ramot-meta').textContent=`${knownRamot.length} חלקים · ${ramotRecs.length.toLocaleString('he')} רשומות`;
+      qs('ramot-meta').textContent=`${knownRamot.length} חלקים · ${ramotRecs.length.toLocaleString('he')} בחורים`;
       const maxN=knownRamot[0]?.[1]||1;
       let html=`<div class="city-card city-card-total" style="cursor:pointer" data-ramot="" onclick="filterRamot(null)">
         <div class="city-count">${ramotRecs.length.toLocaleString('he')}</div>
@@ -716,7 +716,7 @@ function renderDrillTable(){
         return`<td class="${cls}" data-label="${esc(colLabel(c))}">${highlight(v,q)}</td>`
       }).join('')}</tr>`).join('')
     :`<tr><td colspan="${_columns.length+1}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
-  qs('list-info').textContent=`${total.toLocaleString('he')} רשומות`;
+  qs('list-info').textContent=`${total.toLocaleString('he')} בחורים`;
   qs('page-info').textContent=`עמוד ${_drillPage} / ${pages}`;
   const b=[`<button onclick="goPage(${_drillPage-1})" ${_drillPage<=1?'disabled':''}>›</button>`];
   const lo=Math.max(1,_drillPage-3),hi=Math.min(pages,_drillPage+3);
@@ -733,8 +733,8 @@ function sortDrill(col){if(_drillSort===col)_drillSortAsc=!_drillSortAsc;else{_d
 function drillAll(){
   _activeCity='__all__';_activeNbhd=null;_activeRamot=null;_drillPage=1;_drillSort=null;_drillSortAsc=true;
   qs('search-in').value='';
-  qs('drill-title').textContent='כל הרשומות';
-  qs('drill-count').textContent=`${_records.length.toLocaleString('he')} רשומות`;
+  qs('drill-title').textContent='כל הבחורים';
+  qs('drill-count').textContent=`${_records.length.toLocaleString('he')} בחורים`;
   qs('nbhd-section').hidden=true;
   qs('ramot-section').hidden=true;
   qs('view-dashboard').hidden=true;qs('view-city').hidden=false;
