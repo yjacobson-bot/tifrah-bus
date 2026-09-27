@@ -1397,13 +1397,14 @@ function adminShowBusForm(){
       <td style="padding:6px 10px;font-weight:600">${esc(city)}</td>
       <td style="padding:6px 10px;text-align:center;color:var(--muted)">${count}</td>
       <td style="padding:6px 10px">
-        <input type="number" min="0" max="99" placeholder="—" data-city="${esc(city)}"
+        <input type="number" min="0" max="99" value="0" data-city="${esc(city)}"
           style="width:64px;height:30px;padding:0 6px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;text-align:center;outline:none">
       </td>
     </tr>`).join('');
   }
   document.getElementById('bus-form-section').hidden=false;
   document.getElementById('close-reg-confirm').hidden=true;
+  document.getElementById('snap-save-btn').hidden=true;
 }
 
 // שלב 2: אישור + שמירה + איפוס
@@ -1561,10 +1562,10 @@ function toggleTheme(){
           </table>
           <div style="display:flex;gap:8px;margin-top:12px">
             <button onclick="adminCloseRegistration()" style="flex:1;height:36px;background:#166534;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">✅ שמור וסגור רישום</button>
-            <button onclick="document.getElementById('bus-form-section').hidden=true" style="height:36px;padding:0 14px;background:var(--g100);border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
+            <button onclick="document.getElementById('bus-form-section').hidden=true;document.getElementById('snap-save-btn').hidden=false" style="height:36px;padding:0 14px;background:var(--g100);border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
           </div>
         </div>
-        <button onclick="adminShowBusForm()" style="width:100%;height:38px;background:#166534;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">שמור בארכיון ואפס שלוחה</button>
+        <button id="snap-save-btn" onclick="adminShowBusForm()" style="width:100%;height:38px;background:#166534;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">שמור בארכיון ואפס שלוחה</button>
       </div>
 
       <!-- ארכיון רישומים -->
