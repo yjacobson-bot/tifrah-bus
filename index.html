@@ -910,34 +910,33 @@ async function adminRemoveTime(){
 
 // עדכון ext.ini — רק שורת enter_foldar_end_time, הכל אחר נשאר שלם
 async function adminUpdateExtIni(newVal){
-  const tok=await getToken();if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
-  adminMsg('מוריד ext.ini…','#92400E');
-  try{
-    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
-    let txt=r.ok?await r.text():'';
+  const tok=await getToken();
+  if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
 
-    // מטפלים בשורה — אחד מ-3 מצבים:
-    // 1. שורה פעילה: enter_foldar_end_time=...
-    // 2. שורה מושבתת: ;enter_foldar_end_time=...
-    // 3. לא קיימת בכלל
+  try{
+    // שלב 1: הורדה
+    adminMsg('⏳ שלב 1/2: מוריד ext.ini…','#92400E');
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    if(!r.ok){adminMsg(`שגיאה בהורדה: HTTP ${r.status}`,'#991B1B');return}
+    let txt=await r.text();
+    if(!txt||txt.trim()===''){adminMsg('הקובץ ext.ini ריק או לא נמצא','#991B1B');return}
+
+    // שלב 2: עריכה
     const hasActive=/^enter_foldar_end_time=.+$/m.test(txt);
-    const hasComment=/^;enter_foldar_end_time=.+$/m.test(txt);
+    const hasComment=/^;[ \t]*enter_foldar_end_time=.+$/m.test(txt);
 
     if(newVal){
       const newLine=`enter_foldar_end_time=${newVal}`;
       if(hasActive){
         txt=txt.replace(/^enter_foldar_end_time=.+$/m,newLine);
       } else if(hasComment){
-        // פעיל — מסיר את ה-; ומעדכן
-        txt=txt.replace(/^;enter_foldar_end_time=.+$/m,newLine);
+        txt=txt.replace(/^;[ \t]*enter_foldar_end_time=.+$/m,newLine);
       } else {
-        // לא קיים — מוסיף אחרי השורה הראשונה
         const lines=txt.split('\n');
         lines.splice(1,0,newLine);
         txt=lines.join('\n');
       }
     } else {
-      // הסרה — מגבלה: מסמן עם ;
       if(hasActive){
         txt=txt.replace(/^(enter_foldar_end_time=.+)$/m,';$1');
       } else if(hasComment){
@@ -947,19 +946,19 @@ async function adminUpdateExtIni(newVal){
       }
     }
 
-    // העלאה בחזרה — תוכן גולמי
-    adminMsg('מעלה ext.ini…','#92400E');
+    // שלב 3: העלאה — multipart/form-data
+    adminMsg('⏳ שלב 2/2: מעלה ext.ini…','#92400E');
+    const form=new FormData();
+    form.append('file',new Blob([txt],{type:'text/plain;charset=utf-8'}),'ext.ini');
     const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:txt
+      method:'POST',body:form
     });
     const upTxt=await up.text();
-    if(upTxt.includes('responsetype=OK')||upTxt.includes('OK')){
+    if(upTxt.includes('responsetype=OK')||upTxt.toLowerCase().includes('ok')){
       adminMsg(newVal?`✅ מגבלה הוגדרת: ${newVal}`:'✅ המגבלה הוסרה','#166534');
       adminLoadExtTime();
     } else {
-      adminMsg('תגובת שרת: '+upTxt,'#991B1B');
+      adminMsg('שרת השיב: '+upTxt.slice(0,120),'#991B1B');
     }
   }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
 }
