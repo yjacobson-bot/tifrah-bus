@@ -209,6 +209,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
 
   <div id="view-dashboard">
     <div id="ext-status-banner" hidden style="text-align:center;padding:48px 24px 56px;background:var(--surface);border-radius:16px;margin-bottom:0"></div>
+    <div id="dash-content">
     <div class="section">
       <div class="section-head"><span class="section-title">סיכום לפי ערים</span><span id="dash-meta" class="section-meta"></span></div>
       <div id="city-grid"><div class="empty"><div class="ico">🏙️</div><p>טוען נתונים…</p></div></div>
@@ -217,6 +218,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div class="section-head"><span class="section-title">התפלגות לפי עיר</span></div>
       <div id="pie-wrap" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap"></div>
     </div>
+    </div><!-- /dash-content -->
   </div>
 
   <div id="view-city" hidden>
@@ -540,6 +542,7 @@ function _tickExtStatus(){
   if(diff<=0){
     clearInterval(_extStatusInterval);_extStatusInterval=null;
     banner.hidden=true;_extStatusTarget=null;
+    const dc=document.getElementById('dash-content');if(dc)dc.hidden=false;
     return;
   }
   countdown.textContent=fmtDiffSecs(diff);
@@ -563,42 +566,44 @@ async function loadExtStatus(){
     if(_extStatusInterval){clearInterval(_extStatusInterval);_extStatusInterval=null;}
     _extStatusTarget=null;
 
-    if(endTime&&now>endTime){
-      // סגורה — הצג טיימר פתיחה
-      const openIn=startTime&&startTime>now?fmtDiffSecs(startTime-now):null;
-      banner.style.cssText='';
-      banner.innerHTML=`
-        <div style="font-size:64px;margin-bottom:8px">🔒</div>
-        <div style="font-size:clamp(22px,5vw,36px);font-weight:900;color:var(--text);margin-bottom:4px">השלוחה סגורה לרישום</div>
-        ${openIn?`
-        <div style="font-size:15px;color:var(--text-secondary);margin-bottom:4px">תיפתח בעוד</div>
-        <div id="ext-countdown" style="font-size:clamp(48px,12vw,88px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:2px;color:#DC2626;line-height:1">${openIn}</div>
-        `:''}
-        <div style="font-size:13px;color:var(--text-secondary);margin-top:16px">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>`;
+    const dashContent=document.getElementById('dash-content');
+    const showBanner=(html,target)=>{
+      banner.innerHTML=html;
       banner.hidden=false;
-      if(openIn&&startTime){
-        _extStatusTarget={type:'closed',targetTime:startTime};
-        _extStatusInterval=setInterval(_tickExtStatus,1000);
-      }
-    } else if(startTime&&now<startTime){
-      // עוד לא נפתחה
-      const diff=fmtDiffSecs(startTime-now);
-      banner.style.cssText='';
-      banner.innerHTML=`
-        <div style="font-size:64px;margin-bottom:8px">⏳</div>
-        <div style="font-size:clamp(22px,5vw,36px);font-weight:900;color:var(--text);margin-bottom:4px">הרישום טרם נפתח</div>
-        ${diff?`
-        <div style="font-size:15px;color:var(--text-secondary);margin-bottom:4px">יפתח בעוד</div>
-        <div id="ext-countdown" style="font-size:clamp(48px,12vw,88px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:2px;color:#D97706;line-height:1">${diff}</div>
-        `:''}
-        <div style="font-size:13px;color:var(--text-secondary);margin-top:16px">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>`;
-      banner.hidden=false;
-      _extStatusTarget={type:'pending',targetTime:startTime};
-      _extStatusInterval=setInterval(_tickExtStatus,1000);
-    } else {
+      if(dashContent)dashContent.hidden=true;
+      if(target){_extStatusTarget=target;_extStatusInterval=setInterval(_tickExtStatus,1000);}
+    };
+    const hideBanner=()=>{
       banner.hidden=true;
+      if(dashContent)dashContent.hidden=false;
+    };
+
+    if(endTime&&now>endTime){
+      const openIn=startTime&&startTime>now?fmtDiffSecs(startTime-now):null;
+      showBanner(`
+        <div style="font-size:56px;line-height:1;margin-bottom:16px">🔒</div>
+        <div style="font-size:clamp(24px,5vw,40px);font-weight:900;color:var(--text);margin-bottom:12px">השלוחה סגורה לרישום</div>
+        ${openIn?`
+        <div style="font-size:15px;color:var(--text-secondary);margin-bottom:8px">תיפתח בעוד</div>
+        <div id="ext-countdown" style="font-size:clamp(52px,13vw,96px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:3px;color:#DC2626;line-height:1.1">${openIn}</div>
+        `:''}
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:20px;opacity:.7">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>`,
+        openIn&&startTime?{type:'closed',targetTime:startTime}:null);
+    } else if(startTime&&now<startTime){
+      const diff=fmtDiffSecs(startTime-now);
+      showBanner(`
+        <div style="font-size:56px;line-height:1;margin-bottom:16px">⏳</div>
+        <div style="font-size:clamp(24px,5vw,40px);font-weight:900;color:var(--text);margin-bottom:12px">הרישום טרם נפתח</div>
+        ${diff?`
+        <div style="font-size:15px;color:var(--text-secondary);margin-bottom:8px">יפתח בעוד</div>
+        <div id="ext-countdown" style="font-size:clamp(52px,13vw,96px);font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:3px;color:#D97706;line-height:1.1">${diff}</div>
+        `:''}
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:20px;opacity:.7">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>`,
+        {type:'pending',targetTime:startTime});
+    } else {
+      hideBanner();
     }
-  }catch{banner.hidden=true;}
+  }catch{banner.hidden=true;const dc=document.getElementById('dash-content');if(dc)dc.hidden=false;}
 }
 
 async function loadData(){
