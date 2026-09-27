@@ -105,10 +105,11 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .empty .ico{font-size:40px;margin-bottom:8px}
 .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:18px;width:100%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .loading-logo{width:110px;height:110px;object-fit:contain;animation:spin-logo 1.4s cubic-bezier(.6,0,.4,1) infinite;filter:brightness(0)}
-.cd-unit{display:flex;flex-direction:column;align-items:center;gap:4px}
-.cd-label{font-size:clamp(12px,2vw,15px);font-weight:600;opacity:.65;letter-spacing:.5px}
-.cd-num{font-size:clamp(48px,12vw,88px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
-.cd-sep{font-size:clamp(40px,10vw,76px);font-weight:900;line-height:1;margin-top:22px;opacity:.4}
+.cd-days-row{font-size:clamp(18px,4vw,26px);font-weight:700;opacity:.85;margin-bottom:4px}
+.cd-days-num{font-size:clamp(28px,6vw,42px);font-weight:900;margin-left:6px}
+.cd-days-label{font-size:clamp(16px,3vw,22px)}
+.cd-hms-label{font-size:clamp(12px,2vw,14px);opacity:.6;letter-spacing:1px;margin-bottom:4px}
+.cd-hms{font-size:clamp(56px,14vw,100px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:2px}
 @keyframes spin-logo{0%{transform:rotate(0deg) scale(1)}40%{transform:rotate(180deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}
 .loading-text{font-size:15px;color:var(--fg);font-weight:500;letter-spacing:.03em;text-align:center}
 .sort-chip{display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid #93C5FD;border-radius:20px;padding:3px 10px 3px 6px;font-size:13px;font-weight:600;color:var(--accent)}
@@ -524,12 +525,11 @@ function fmtDiffSecs(ms){
   if(ms<=0)return null;
   const tot=Math.floor(ms/1000);
   const d=Math.floor(tot/86400),h=Math.floor((tot%86400)/3600),m=Math.floor((tot%3600)/60),s=tot%60;
-  const ss=String(s).padStart(2,'0'),mm=String(m).padStart(2,'0'),hh=String(h).padStart(2,'0'),dd=String(d);
-  const u=(label,val)=>`<div class="cd-unit"><div class="cd-label">${label}</div><div class="cd-num">${val}</div></div>`;
-  const sep=`<div class="cd-sep">:</div>`;
-  if(d>0)return u('ימים',dd)+sep+u('שעות',hh)+sep+u('דקות',mm)+sep+u('שניות',ss);
-  if(h>0)return u('שעות',hh)+sep+u('דקות',mm)+sep+u('שניות',ss);
-  return u('דקות',mm)+sep+u('שניות',ss);
+  const ss=String(s).padStart(2,'0'),mm=String(m).padStart(2,'0'),hh=String(h).padStart(2,'0');
+  const hms=`<div class="cd-hms" dir="ltr">${h>0||d>0?hh+':':''}${mm}:${ss}</div>`;
+  const hmslabel=`<div class="cd-hms-label" dir="rtl">${d>0||h>0?'שעות : ':''}דקות : שניות</div>`;
+  if(d>0)return `<div class="cd-days-row"><span class="cd-days-num">${d}</span><span class="cd-days-label">ימים</span></div>${hmslabel}${hms}`;
+  return hmslabel+hms;
 }
 // legacy alias used elsewhere
 function fmtDiff(ms){return fmtDiffSecs(ms);}
@@ -591,7 +591,7 @@ async function loadExtStatus(){
         <div style="font-size:clamp(24px,5vw,40px);font-weight:900;color:var(--text);margin-bottom:12px">השלוחה סגורה לרישום</div>
         ${openIn?`
         <div style="font-size:15px;color:var(--text-secondary);margin-bottom:8px">תיפתח בעוד</div>
-        <div id="ext-countdown" style="display:flex;align-items:flex-start;justify-content:center;gap:8px;color:#DC2626">${openIn}</div>
+        <div id="ext-countdown" style="display:flex;flex-direction:column;align-items:center;color:#DC2626">${openIn}</div>
         `:''}
         <div style="font-size:12px;color:var(--text-secondary);margin-top:20px;opacity:.7">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>`,
         openIn&&startTime?{type:'closed',targetTime:startTime}:null);
@@ -602,7 +602,7 @@ async function loadExtStatus(){
         <div style="font-size:clamp(24px,5vw,40px);font-weight:900;color:var(--text);margin-bottom:12px">הרישום טרם נפתח</div>
         ${diff?`
         <div style="font-size:15px;color:var(--text-secondary);margin-bottom:8px">יפתח בעוד</div>
-        <div id="ext-countdown" style="display:flex;align-items:flex-start;justify-content:center;gap:8px;color:#D97706">${diff}</div>
+        <div id="ext-countdown" style="display:flex;flex-direction:column;align-items:center;color:#D97706">${diff}</div>
         `:''}
         <div style="font-size:12px;color:var(--text-secondary);margin-top:20px;opacity:.7">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>`,
         {type:'pending',targetTime:startTime});
