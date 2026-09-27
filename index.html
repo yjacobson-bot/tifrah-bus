@@ -49,7 +49,7 @@ code{background:rgba(0,0,0,.08);padding:1px 5px;border-radius:4px;font-size:12px
 #dash-meta .meta-num{color:var(--accent);font-weight:700}
 #dash-meta .meta-lbl{color:var(--fg)}
 #dash-meta .meta-sep{color:var(--muted);font-weight:400}
-#city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+#city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;position:relative;min-height:120px}
 .city-card{border-radius:12px;padding:14px 16px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;border:2px solid transparent}
 .city-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .city-card:active{transform:scale(.97)}
@@ -103,7 +103,7 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .pager-btns button:disabled{opacity:.3;cursor:not-allowed}
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty .ico{font-size:40px;margin-bottom:8px}
-.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:18px}
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:18px;width:100%;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 .loading-logo{width:72px;height:72px;object-fit:contain;animation:spin-logo 1.4s cubic-bezier(.6,0,.4,1) infinite}
 @keyframes spin-logo{0%{transform:rotate(0deg) scale(1)}40%{transform:rotate(180deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}
 .loading-text{font-size:15px;color:var(--fg);font-weight:500;letter-spacing:.03em;text-align:center}
