@@ -255,6 +255,28 @@ const RAMOT_MAP={
 };
 
 const API='https://private.call2all.co.il/ym/api/';
+const GH_REPO='yjacobson-bot/tifrah-bus';
+let _currentSha=null;
+
+async function checkVersion(){
+  try{
+    const r=await fetch(`https://api.github.com/repos/${GH_REPO}/commits?per_page=1`,
+      {headers:{Accept:'application/vnd.github.v3+json'}});
+    if(!r.ok)return;
+    const data=await r.json();
+    const sha=data[0]?.sha;
+    if(!sha)return;
+    if(_currentSha===null){_currentSha=sha;return} // שמירה ראשונית
+    if(sha!==_currentSha){
+      // גרסה חדשה!
+      const t=qs('toast');
+      t.className='toast toast-info';
+      t.innerHTML=`<span>🔄 המערכת עודכנה — </span><button onclick="location.reload()" style="background:#1E40AF;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">לחץ לרענון</button>`;
+      t.hidden=false;
+    }
+  }catch{}
+}
+
 let _token=null,_tokenAt=0,_records=[],_columns=[];
 // שדות קבועים לפי ApprovalAll.ini
 const CITY_KEY='P050';
@@ -793,7 +815,7 @@ function startTimer(){
   _cdCount=CONFIG.refreshSec;updateRing();clearInterval(_timerInterval);
   _timerInterval=setInterval(async()=>{
     if(_paused)return;
-    _cdCount--;if(_cdCount<=0){_cdCount=CONFIG.refreshSec;const st=saveState();await loadData();await restoreState(st);}
+    _cdCount--;if(_cdCount<=0){_cdCount=CONFIG.refreshSec;const st=saveState();await loadData();await restoreState(st);checkVersion();}
     updateRing();
   },1000);
 }
@@ -1000,6 +1022,7 @@ function toggleTheme(){
 (async function(){
   try{const t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);const btn=qs('btn-theme');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';}}catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
+  checkVersion(); // שמירת SHA ראשוני
   await loadData();startTimer();
 })();
 </script>
