@@ -1017,9 +1017,7 @@ function buildExcelSheet(records){
   }));
   const ws=XLSX.utils.aoa_to_sheet([EXCEL_HDRS,...rows]);
   ws['!cols']=[{wch:20},{wch:16},{wch:14},{wch:20},{wch:14}];
-  // כיוון RTL לגיליון
-  if(!ws['!views'])ws['!views']=[];
-  ws['!views'][0]={rightToLeft:true};
+  ws['!views']=[{rightToLeft:true,workbookViewId:0}];
   return ws;
 }
 
