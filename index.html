@@ -856,6 +856,7 @@ async function adminBackupAndReset(){
   try{
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,buildExcelSheet(_records),'בחורים');
+    wb.Workbook={Views:[{RTL:true}]};
     const now=new Date();
     const stamp=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     XLSX.writeFile(wb,`תפרח_גיבוי_לפני_מחיקה_${stamp}.xlsx`);
@@ -1026,7 +1027,8 @@ function exportExcel(){
   try{
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,buildExcelSheet(_drillFiltered),'בחורים');
-    const cityPart=_activeCity?`_${_activeCity}`:'';
+    wb.Workbook={Views:[{RTL:true}]};
+    const cityPart=(_activeCity&&_activeCity!=='__all__')?`_${_activeCity}`:'';
     const nbhdPart=_activeNbhd?`_${_activeNbhd}`:'';
     const fname=`תפרח_רישום${cityPart}${nbhdPart}_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.xlsx`;
     XLSX.writeFile(wb,fname);
