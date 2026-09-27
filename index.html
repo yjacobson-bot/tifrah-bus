@@ -561,8 +561,9 @@ function renderDashboard(){
   const unknownCount=allCities.find(([c])=>c==='(לא ידוע)')?.[1]||0;
   const knownTotal=cities.reduce((s,[,n])=>s+n,0);
   const total=_records.length;
-  const busTotal=Math.ceil(total/55);
-  qs('dash-meta').textContent=`${total.toLocaleString('he')} בחורים · ${cities.length} ערים · 🚌 ${busTotal} אוטובוסים סה"כ`;
+  const fullBusTotal=Math.floor(total/55),remTotal=total%55;
+  const busTotalLabel=remTotal>0?`🚌 ${fullBusTotal}+${remTotal} סה"כ`:`🚌 ${fullBusTotal} אוטובוסים סה"כ`;
+  qs('dash-meta').textContent=`${total.toLocaleString('he')} בחורים · ${cities.length} ערים · ${busTotalLabel}`;
   const maxN=cities[0]?.[1]||1;
   let html=`<div class="city-card city-card-total" onclick="drillAll()" style="cursor:pointer">
     <div class="city-count">${total.toLocaleString('he')}</div>
@@ -572,12 +573,18 @@ function renderDashboard(){
   const totalBuses=Math.ceil(knownTotal/55);
   cities.forEach(([city,count],i)=>{
     const pct=Math.round(count/knownTotal*1000)/10,fw=Math.round(count/maxN*100);
-    const buses=Math.ceil(count/55);
+    const fullBuses=Math.floor(count/55),remainder=count%55;
+    const busLabel=remainder>0
+      ?`🚌 ${fullBuses}+${remainder}`
+      :`🚌 ${fullBuses}`;
+    const busTitle=remainder>0
+      ?`${count} נרשמים · ${fullBuses} אוטובוס${fullBuses!==1?'ים':''} מלא${fullBuses!==1?'ים':''} + ${remainder} נוספים`
+      :`${count} נרשמים · ${fullBuses} אוטובוס${fullBuses!==1?'ים':''} מלא${fullBuses!==1?'ים':''}`;
     html+=`<div class="city-card ${COL_CLS[i%12]}" data-city="${esc(city)}" onclick="drillCity(this.dataset.city)">
       <div class="city-count">${count.toLocaleString('he')}</div>
       <div class="city-name">${esc(city)}</div>
       <div class="city-pct">${pct}%</div>
-      <div style="font-size:12px;opacity:.75;margin-top:4px">🚌 ${buses} אוטובוס${buses!==1?'ים':''}</div>
+      <div style="font-size:12px;opacity:.75;margin-top:4px;cursor:help" title="${busTitle}">${busLabel}</div>
       <div class="bar-bg"><div class="bar-fill" style="width:${fw}%"></div></div>
     </div>`;
   });
