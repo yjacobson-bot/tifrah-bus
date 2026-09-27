@@ -928,17 +928,19 @@ async function adminUpdateExtIni(newVal){
       }
     }
 
-    // העלאה בחזרה
+    // העלאה בחזרה — תוכן גולמי
     adminMsg('מעלה ext.ini…','#92400E');
-    const form=new FormData();
-    form.append('file',new Blob([txt],{type:'text/plain'}),'ext.ini');
-    const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{method:'POST',body:form});
+    const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:txt
+    });
     const upTxt=await up.text();
-    if(upTxt.includes('OK')){
+    if(upTxt.includes('responsetype=OK')||upTxt.includes('OK')){
       adminMsg(newVal?`✅ מגבלה הוגדרת: ${newVal}`:'✅ המגבלה הוסרה','#166534');
       adminLoadExtTime();
     } else {
-      adminMsg('שגיאה בהעלאה: '+upTxt,'#991B1B');
+      adminMsg('תגובת שרת: '+upTxt,'#991B1B');
     }
   }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
 }
