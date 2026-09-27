@@ -568,7 +568,7 @@ async function loadExtStatus(){
     const txt=await r.text();
     const now=new Date();
     const endM=txt.match(/^enter_foldar_end_time=(.+)$/m);
-    const startM=txt.match(/^enter_foldar_start_time=(.+)$/m);
+    const startM=txt.match(/^enter_after_time=(.+)$/m);
     const endTime=endM?parseYmTime(endM[1]):null;
     const startTime=startM?parseYmTime(startM[1]):null;
 
@@ -1150,7 +1150,7 @@ async function adminLoadExtTime(){
       div.innerHTML=`שעת סגירה (מושבתת): <strong>${endAny[1].trim()}</strong>`;div.hidden=false;
     } else {div.hidden=true;}
     // שעת פתיחה
-    const startActive=txt.match(/^enter_foldar_start_time=(.+)$/m);
+    const startActive=txt.match(/^enter_after_time=(.+)$/m);
     if(startActive){
       const el=qs('admin-start-dt');if(el)el.value=parts2dt(startActive[1]);
     }
@@ -1234,17 +1234,17 @@ async function adminUpdateExtIni(newVal){
   }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
 }
 
-// ── שעת פתיחה (enter_foldar_start_time) ──
+// ── שעת פתיחה (enter_after_time) ──
 async function adminSetStartTime(){
   const dtVal=qs('admin-start-dt').value;
   if(!dtVal){adminMsg('⚠️ בחר תאריך ושעה תחילה','#92400E');return}
   adminMsg('⏳ מעבד…','#92400E');
   const [date,time]=dtVal.split('T');const [h,m]=time.split(':');
-  await adminUpdateExtIniLine('enter_foldar_start_time',`${date}-${h}-${m}-00`);
+  await adminUpdateExtIniLine('enter_after_time',`${date}-${h}-${m}-00`);
 }
 async function adminRemoveStartTime(){
   adminMsg('⏳ מעבד…','#92400E');
-  await adminUpdateExtIniLine('enter_foldar_start_time',null);
+  await adminUpdateExtIniLine('enter_after_time',null);
 }
 async function adminUpdateExtIniLine(key,newVal){
   let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
