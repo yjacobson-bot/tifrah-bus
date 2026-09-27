@@ -511,7 +511,7 @@ function renderMiniPie(items,containerId){
     const large=slice>Math.PI?1:0;
     const col=COLORS[i%COLORS.length];
     paths+=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${large},1 ${x2},${y2} Z" fill="${col}" stroke="var(--surface)" stroke-width="2"/>`;
-    const pct=Math.round(count/total*100);
+    const pct=Math.round(count/total*1000)/10;
     legendHtml+=`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:5px">
       <span style="width:11px;height:11px;border-radius:3px;background:${col};flex-shrink:0"></span>
       <span style="font-weight:600">${esc(name)}</span>
@@ -550,7 +550,7 @@ function renderDashboard(){
     ${unknownCount?`<div class="city-pct">${unknownCount.toLocaleString('he')} ללא עיר</div>`:''}
   </div>`;
   cities.forEach(([city,count],i)=>{
-    const pct=Math.round(count/knownTotal*100),fw=Math.round(count/maxN*100);
+    const pct=Math.round(count/knownTotal*1000)/10,fw=Math.round(count/maxN*100);
     html+=`<div class="city-card ${COL_CLS[i%12]}" data-city="${esc(city)}" onclick="drillCity(this.dataset.city)">
       <div class="city-count">${count.toLocaleString('he')}</div>
       <div class="city-name">${esc(city)}</div>
@@ -583,7 +583,7 @@ function drillCity(raw){
       <div class="city-count">${cityRecs.length.toLocaleString('he')}</div>
       <div class="city-name">הכל</div></div>`;
     nbhds.forEach(([n,c],i)=>{
-      const pct=Math.round(c/nbhdTotal*100),fw=Math.round(c/maxN*100);
+      const pct=Math.round(c/nbhdTotal*1000)/10,fw=Math.round(c/maxN*100);
       html+=`<div class="city-card ${COL_CLS[i%12]}" data-nbhd="${esc(n)}" onclick="filterNbhd(this.dataset.nbhd)">
         <div class="city-count">${c.toLocaleString('he')}</div>
         <div class="city-name">${esc(n)}</div>
@@ -624,7 +624,7 @@ function filterNbhd(nbhd){
         ${unknownRamot?`<div class="city-pct">${unknownRamot} ללא פרוט</div>`:''}
         </div>`;
       knownRamot.forEach(([n,c],i)=>{
-        const pct=Math.round(c/ramotTotal*100),fw=Math.round(c/maxN*100);
+        const pct=Math.round(c/ramotTotal*1000)/10,fw=Math.round(c/maxN*100);
         html+=`<div class="city-card ${COL_CLS[(i+5)%12]}" data-ramot="${esc(n)}" onclick="filterRamot(this.dataset.ramot)">
           <div class="city-count">${c.toLocaleString('he')}</div>
           <div class="city-name">${esc(n)}</div>
