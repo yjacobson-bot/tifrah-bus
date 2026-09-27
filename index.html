@@ -607,7 +607,9 @@ function renderDashboard(){
   const unknownCount=allCities.find(([c])=>c==='(לא ידוע)')?.[1]||0;
   const knownTotal=cities.reduce((s,[,n])=>s+n,0);
   const total=_records.length;
-  const fullBusTotal=Math.floor(total/55),remTotal=total%55;
+  // חישוב אוטובוסים לפי ערים (לא גלובלי)
+  const fullBusTotal=cities.reduce((s,[,n])=>s+Math.floor(n/55),0);
+  const remTotal=cities.reduce((s,[,n])=>s+(n%55),0);
   const busLabel=fullBusTotal>0?`<span class="meta-num">${fullBusTotal}</span><span class="meta-lbl"> אוטובוסים מלאים</span>`:'';
   const remLabel=remTotal>0?`${fullBusTotal>0?'<span class="meta-sep"> + </span>':''}<span class="meta-num">${remTotal}</span><span class="meta-lbl"> רשומים שלא מילאו אוטובוס</span>`:'';
   qs('dash-meta').innerHTML=`<span class="meta-num">${total.toLocaleString('he')}</span><span class="meta-lbl"> בחורים</span><span class="meta-sep"> · </span><span class="meta-num">${cities.length}</span><span class="meta-lbl"> ערים</span><span class="meta-sep"> · </span>${busLabel}${remLabel}`;
