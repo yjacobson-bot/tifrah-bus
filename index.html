@@ -984,36 +984,24 @@ async function adminBackupAndReset(){
   await adminDoReset();
 }
 
-// איפוס רישום — מחיקה או ריקון ApprovalAll.ymgr
+// איפוס רישום — מחיקת ApprovalAll.ymgr
 async function adminDoReset(){
   let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
   if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
-  adminMsg('מאפס…','#92400E');
+  adminMsg('מוחק…','#92400E');
   const filePath=`ivr2:${CONFIG.folder}/ApprovalAll.ymgr`;
   try{
-    // נסה מחיקה
     const r=await fetch(`${API}DeleteFile?token=${tok}&path=${filePath}`);
     const t=await r.text();
-    if(t.includes('responsetype=OK')||t.includes('"responseStatus":"OK"')){
-      adminMsg('✅ הרשימה אופסה! רישום חדש יתחיל כשמישהו יירשם.','#166534');
-      qs('admin-reset-confirm').hidden=true;
-      _prevCount=null; _records=[];
-      renderDashboard();return;
-    }
-    // אם מחיקה נכשלה (name is not allowed וכד') — העלה קובץ ריק
-    const fd=new FormData();
-    fd.append('token',tok);
-    fd.append('path',filePath);
-    fd.append('file',new Blob([''],{type:'text/plain'}),'ApprovalAll.ymgr');
-    const r2=await fetch(`${API}UploadFile`,{method:'POST',body:fd});
-    const t2=await r2.text();
-    if(t2.includes('responsetype=OK')||t2.includes('"responseStatus":"OK"')){
-      adminMsg('✅ הרשימה אופסה! רישום חדש יתחיל כשמישהו יירשם.','#166534');
+    if(t.includes('responsetype=OK')||t.includes('"responseStatus":"OK"')||t.includes('OK')){
+      adminMsg('✅ הרשימה נמחקה! רישום חדש יתחיל כשמישהו יירשם.','#166534');
       qs('admin-reset-confirm').hidden=true;
       _prevCount=null; _records=[];
       renderDashboard();
+    } else if(t.includes('name is not allowed')||t.includes('EXCEPTION')){
+      adminMsg('⚠️ לא ניתן למחוק אוטומטית — מחק ידנית בפורטל ימות את הקובץ <strong>ApprovalAll.ymgr</strong> מתיקייה ' + CONFIG.folder,'#92400E');
     } else {
-      adminMsg('שגיאה באיפוס: '+t2,'#991B1B');
+      adminMsg('שגיאה במחיקה: '+t,'#991B1B');
     }
   }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
 }
