@@ -235,6 +235,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
         <button id="export-btn" class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
+        <button class="btn-export" onclick="printDrill()" style="background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
       </div>
       <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
       <div class="pager"><span id="page-info"></span><div class="pager-btns" id="page-btns"></div></div>
@@ -1063,6 +1064,47 @@ function exportExcel(){
     XLSX.writeFile(wb,fname);
     showAlert('success','קובץ אקסל הורד',fname);
   }catch(e){showAlert('error','שגיאה בייצוא',e.message)}
+}
+
+function printDrill(){
+  if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
+  const cityPart=(_activeCity&&_activeCity!=='__all__')?_activeCity:'כל הבחורים';
+  const nbhdPart=_activeNbhd?` / ${_activeNbhd}`:'';
+  const title=`רישום הסעות ישיבת תפרח — ${cityPart}${nbhdPart}`;
+  const date=new Date().toLocaleDateString('he-IL',{year:'numeric',month:'long',day:'numeric'});
+  const rows=_drillFiltered.map((r,i)=>`<tr>
+    <td>${i+1}</td>
+    <td>${esc(r.ValName||r.Name||'')}</td>
+    <td dir="ltr">${esc(r.Phone||r.Folder||'')}</td>
+    <td>${esc(cityLabel(r[CITY_KEY]))}</td>
+    <td>${esc(nbhdLabel(r[NBHD_KEY]))}</td>
+  </tr>`).join('');
+  const html=`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+  <title>${title}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#000;direction:rtl}
+    h1{font-size:16px;margin-bottom:4px}
+    .sub{font-size:11px;color:#555;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #bbb;padding:5px 8px;text-align:right}
+    th{background:#1e3a6e;color:#fff;font-size:11px}
+    tr:nth-child(even){background:#f0f4ff}
+    .footer{margin-top:14px;font-size:10px;color:#888;text-align:center}
+    @media print{body{padding:10px}}
+  </style></head><body>
+  <h1>${title}</h1>
+  <div class="sub">הודפס: ${date} · סה"כ: ${_drillFiltered.length} רשומים</div>
+  <table>
+    <thead><tr><th>#</th><th>שם</th><th>טלפון</th><th>עיר</th><th>שכונה</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">מערכת רישום הסעות ישיבת תפרח</div>
+  <script>window.onload=()=>{window.print()}<\/script>
+  </body></html>`;
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
 }
 
 function updateExportBtn(){
