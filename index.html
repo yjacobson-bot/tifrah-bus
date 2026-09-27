@@ -988,8 +988,13 @@ async function adminUpdateExtIni(newVal){
 }
 
 function adminMsg(msg,color){
-  const el=qs('admin-status');
-  el.textContent=msg;el.style.color=color;el.hidden=false;
+  // גיבוי: גם toast וגם הסטטוס הפנימי
+  const type=color==='#166534'?'success':color==='#991B1B'?'error':'warning';
+  showAlert(type,'',msg);
+  try{
+    const el=qs('admin-status');
+    if(el){el.textContent=msg;el.style.color=color;el.hidden=false;}
+  }catch{}
 }
 
 // ══════════════════════════════════════════════
