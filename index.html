@@ -984,24 +984,34 @@ async function adminBackupAndReset(){
   await adminDoReset();
 }
 
-// איפוס רישום — מחיקת ApprovalAll.ymgr באמצעות FileAction
+// איפוס רישום — מחיקת כל קבצי ה-.ymgr בתיקייה
 async function adminDoReset(){
   let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
   if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
-  adminMsg('מוחק…','#92400E');
-  const filePath=`ivr2:${CONFIG.folder}/ApprovalAll.ymgr`;
+  adminMsg('מאתר קבצים…','#92400E');
   try{
-    const r=await fetch(`${API}FileAction?token=${tok}&action=delete&what=${filePath}`);
+    // קבל רשימת קבצים בתיקייה
+    const {files}=await getDir(CONFIG.folder);
+    const ymgrFiles=files.filter(f=>f&&f.toLowerCase().endsWith('.ymgr'));
+    if(!ymgrFiles.length){
+      adminMsg('✅ אין קבצי רישום — התיקייה כבר ריקה.','#166534');
+      qs('admin-reset-confirm').hidden=true;
+      _prevCount=null;_records=[];renderDashboard();return;
+    }
+    adminMsg(`מוחק ${ymgrFiles.length} קבצים…`,'#92400E');
+    // מחק את כל הקבצים בקריאה אחת (what0, what1, ...)
+    const params=ymgrFiles.map((f,i)=>`what${i}=${encodeURIComponent('ivr2:'+CONFIG.folder+'/'+f)}`).join('&');
+    const r=await fetch(`${API}FileAction?token=${tok}&action=delete&${params}`);
     const t=await r.text();
+    console.log('FileAction delete:',t);
     const ok=t.includes('"success":true')||t.includes('responsetype=OK');
     if(ok){
-      adminMsg('✅ הרשימה נמחקה! רישום חדש יתחיל כשמישהו יירשם.','#166534');
+      adminMsg(`✅ נמחקו ${ymgrFiles.length} קבצים! רישום חדש יתחיל כשמישהו יירשם.`,'#166534');
       qs('admin-reset-confirm').hidden=true;
-      _prevCount=null; _records=[];
-      renderDashboard();
+      _prevCount=null;_records=[];renderDashboard();
     } else {
-      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק את הקובץ ApprovalAll.ymgr מתיקייה ${CONFIG.folder}`);
-      console.error('FileAction delete response:',t);
+      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק קבצי .ymgr מתיקייה ${CONFIG.folder}`);
+      console.error('תגובה:',t);
     }
   }catch(e){showAlert('error','שגיאת רשת',e.message)}
 }
