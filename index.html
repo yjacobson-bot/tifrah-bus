@@ -208,6 +208,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   </div>
 
   <div id="view-dashboard">
+    <div id="ext-status-banner" hidden style="border-radius:12px;padding:14px 20px;margin-bottom:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;flex-wrap:wrap"></div>
     <div class="section">
       <div class="section-head"><span class="section-title">סיכום לפי ערים</span><span id="dash-meta" class="section-meta"></span></div>
       <div id="city-grid"><div class="empty"><div class="ico">🏙️</div><p>טוען נתונים…</p></div></div>
@@ -506,10 +507,66 @@ function cellVal(rec,col){
   return v;
 }
 
+function parseYmTime(s){
+  // "YYYY-MM-DD-HH-MM-SS" → Date
+  if(!s)return null;
+  const p=s.trim().split('-');
+  if(p.length<5)return null;
+  return new Date(+p[0],+p[1]-1,+p[2],+p[3],+p[4],+(p[5]||0));
+}
+function fmtDiff(ms){
+  if(ms<=0)return null;
+  const tot=Math.floor(ms/1000);
+  const d=Math.floor(tot/86400),h=Math.floor((tot%86400)/3600),m=Math.floor((tot%3600)/60),s=tot%60;
+  if(d>0)return `${d} ימים ו-${h} שעות`;
+  if(h>0)return `${h}:${String(m).padStart(2,'0')} שעות`;
+  return `${m}:${String(s).padStart(2,'0')} דקות`;
+}
+async function loadExtStatus(){
+  let tok;try{tok=await ensureToken();}catch{return}
+  if(!tok)return;
+  const banner=qs('ext-status-banner');
+  try{
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    if(!r.ok){banner.hidden=true;return;}
+    const txt=await r.text();
+    const now=new Date();
+    const endM=txt.match(/^enter_foldar_end_time=(.+)$/m);
+    const startM=txt.match(/^enter_foldar_start_time=(.+)$/m);
+    const endTime=endM?parseYmTime(endM[1]):null;
+    const startTime=startM?parseYmTime(startM[1]):null;
+    if(endTime&&now>endTime){
+      // סגורה
+      const openIn=startTime&&startTime>now?fmtDiff(startTime-now):null;
+      banner.style.cssText='border-radius:12px;padding:14px 20px;margin-bottom:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5';
+      banner.innerHTML=`<span style="font-size:22px">🔒</span>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800">השלוחה סגורה לרישום</div>
+          ${openIn?`<div style="font-size:13px;font-weight:500;margin-top:2px">תיפתח בעוד ${openIn}</div>`:''}
+          <div style="font-size:12px;opacity:.7;margin-top:2px">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>
+        </div>`;
+      banner.hidden=false;
+    } else if(startTime&&now<startTime){
+      // עוד לא נפתחה
+      const diff=fmtDiff(startTime-now);
+      banner.style.cssText='border-radius:12px;padding:14px 20px;margin-bottom:0;font-size:14px;font-weight:600;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--amber-bg);color:#92400E;border:1.5px solid #FCD34D';
+      banner.innerHTML=`<span style="font-size:22px">⏳</span>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800">הרישום טרם נפתח</div>
+          ${diff?`<div style="font-size:13px;font-weight:500;margin-top:2px">יפתח בעוד ${diff}</div>`:''}
+          <div style="font-size:12px;opacity:.7;margin-top:2px">ניתן לשנות בפאנל המנהל → ⏰ זמני רישום</div>
+        </div>`;
+      banner.hidden=false;
+    } else {
+      banner.hidden=true;
+    }
+  }catch{banner.hidden=true;}
+}
+
 async function loadData(){
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
   clearAlert();
-  
+  loadExtStatus(); // בד"כ לא מחכים — נטען במקביל
   try{
     const folder=CONFIG.folder;
     let found=[];
@@ -1729,8 +1786,8 @@ function toggleTheme(){
 
       <!-- ניהול ערים -->
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px">
-        <div style="font-weight:700;font-size:15px;margin-bottom:4px">🏙️ ניהול ערים</div>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">חסימת עיר תסתיר אותה מהרישום ותסמן אותה כחסומה בדשבורד.</p>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px">🏙️ הסתרת ערים בדשבורד</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">מסמן עיר כחסומה בדשבורד בלבד — לא משנה את הגדרות השלוחה עצמה.</p>
         <div id="admin-cities-list"></div>
       </div>
 
