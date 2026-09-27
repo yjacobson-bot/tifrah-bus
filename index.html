@@ -1279,10 +1279,11 @@ function toggleArchive(){
   const av=document.getElementById('view-archive');
   const dv=document.getElementById('view-dashboard');
   const cv=document.getElementById('view-city');
+  const btn=document.getElementById('archive-tab-btn');
   const isOpen=!av.hidden;
   av.hidden=isOpen;
-  if(isOpen){dv.hidden=false;}
-  else{dv.hidden=true;cv.hidden=true;renderArchiveView();}
+  if(isOpen){dv.hidden=false;btn.textContent='📂 ארכיון';}
+  else{dv.hidden=true;cv.hidden=true;renderArchiveView();btn.textContent='⬅ חזרה';}
 }
 
 function toggleTheme(){
