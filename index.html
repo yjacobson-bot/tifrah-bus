@@ -1066,43 +1066,70 @@ function exportExcel(){
   }catch(e){showAlert('error','שגיאה בייצוא',e.message)}
 }
 
+const PRINT_COLS=[
+  {key:'name',  label:'שם',      fn:r=>esc(r.ValName||r.Name||'')},
+  {key:'phone', label:'טלפון',   fn:r=>`<span dir="ltr">${esc(r.Phone||r.Folder||'')}</span>`},
+  {key:'city',  label:'עיר',     fn:r=>esc(cityLabel(r[CITY_KEY]))},
+  {key:'nbhd',  label:'שכונה',   fn:r=>esc(nbhdLabel(r[NBHD_KEY]))},
+  {key:'ramot', label:'רמות',    fn:r=>esc(ramotLabel(r[RAMOT_KEY])||'')},
+];
+let _printColKeys=new Set(['name','phone','city','nbhd']);
+
 function printDrill(){
   if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
+  document.getElementById('print-modal').hidden=false;
+  // sync checkboxes
+  PRINT_COLS.forEach(c=>{
+    const cb=document.getElementById('pcol-'+c.key);
+    if(cb)cb.checked=_printColKeys.has(c.key);
+  });
+}
+function printModalClose(){document.getElementById('print-modal').hidden=true}
+function printModalGo(){
+  _printColKeys=new Set(PRINT_COLS.filter(c=>document.getElementById('pcol-'+c.key)?.checked).map(c=>c.key));
+  printModalClose();
+  const cols=PRINT_COLS.filter(c=>_printColKeys.has(c.key));
   const cityPart=(_activeCity&&_activeCity!=='__all__')?_activeCity:'כל הבחורים';
   const nbhdPart=_activeNbhd?` / ${_activeNbhd}`:'';
-  const title=`רישום הסעות ישיבת תפרח — ${cityPart}${nbhdPart}`;
+  const title=`רישום הסעות — ישיבת תפרח | ${cityPart}${nbhdPart}`;
   const date=new Date().toLocaleDateString('he-IL',{year:'numeric',month:'long',day:'numeric'});
-  const rows=_drillFiltered.map((r,i)=>`<tr>
-    <td>${i+1}</td>
-    <td>${esc(r.ValName||r.Name||'')}</td>
-    <td dir="ltr">${esc(r.Phone||r.Folder||'')}</td>
-    <td>${esc(cityLabel(r[CITY_KEY]))}</td>
-    <td>${esc(nbhdLabel(r[NBHD_KEY]))}</td>
-  </tr>`).join('');
+  const logoSrc=document.querySelector('#top-bar img')?.src||'';
+  const thCells='<th style="width:32px">#</th>'+cols.map(c=>`<th>${c.label}</th>`).join('');
+  const rows=_drillFiltered.map((r,i)=>{
+    const tds=cols.map(c=>`<td>${c.fn(r)}</td>`).join('');
+    return `<tr><td style="text-align:center;color:#555">${i+1}</td>${tds}</tr>`;
+  }).join('');
   const html=`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
   <title>${title}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#000;direction:rtl}
-    h1{font-size:16px;margin-bottom:4px}
-    .sub{font-size:11px;color:#555;margin-bottom:14px}
-    table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #bbb;padding:5px 8px;text-align:right}
-    th{background:#1e3a6e;color:#fff;font-size:11px}
-    tr:nth-child(even){background:#f0f4ff}
-    .footer{margin-top:14px;font-size:10px;color:#888;text-align:center}
-    @media print{body{padding:10px}}
+    body{font-family:Arial,sans-serif;font-size:12px;padding:16px 20px;color:#000;direction:rtl}
+    .print-header{display:flex;align-items:center;gap:14px;border-bottom:2px solid #1e3a6e;padding-bottom:10px;margin-bottom:12px}
+    .print-header img{height:52px;width:auto;filter:brightness(0)}
+    .print-header-text h1{font-size:17px;color:#1e3a6e;margin-bottom:2px}
+    .print-header-text .sub{font-size:11px;color:#555}
+    table{width:100%;border-collapse:collapse;margin-top:4px}
+    th,td{border:1px solid #c8d0e0;padding:5px 8px;text-align:right;font-size:11.5px}
+    th{background:#1e3a6e;color:#fff;font-weight:700}
+    tr:nth-child(even) td{background:#f0f4ff}
+    .footer{margin-top:12px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}
+    @media print{@page{size:A4;margin:12mm} body{padding:0}}
   </style></head><body>
-  <h1>${title}</h1>
-  <div class="sub">הודפס: ${date} · סה"כ: ${_drillFiltered.length} רשומים</div>
+  <div class="print-header">
+    <img src="${logoSrc}" alt="לוגו">
+    <div class="print-header-text">
+      <h1>${title}</h1>
+      <div class="sub">הודפס: ${date} &nbsp;·&nbsp; סה"כ: <strong>${_drillFiltered.length}</strong> רשומים</div>
+    </div>
+  </div>
   <table>
-    <thead><tr><th>#</th><th>שם</th><th>טלפון</th><th>עיר</th><th>שכונה</th></tr></thead>
+    <thead><tr>${thCells}</tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">מערכת רישום הסעות ישיבת תפרח</div>
   <script>window.onload=()=>{window.print()}<\/script>
   </body></html>`;
-  const w=window.open('','_blank','width=900,height=700');
+  const w=window.open('','_blank','width=960,height=750');
   w.document.write(html);
   w.document.close();
 }
@@ -1448,6 +1475,25 @@ function toggleTheme(){
       </div>
 
       <div id="admin-status" hidden style="font-size:14px;margin:12px 0 0;padding:10px 14px;border-radius:8px;background:var(--g100);font-weight:600;text-align:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- מודאל הגדרות הדפסה -->
+<div id="print-modal" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)printModalClose()">
+  <div style="background:var(--surface);border-radius:14px;padding:28px 32px;min-width:280px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25);direction:rtl">
+    <h3 style="margin:0 0 18px;font-size:17px;color:var(--navy)">🖨 הגדרות הדפסה</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">בחר עמודות להדפסה:</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-name"  style="width:16px;height:16px;accent-color:var(--accent)"> שם</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-phone" style="width:16px;height:16px;accent-color:var(--accent)"> טלפון</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-city"  style="width:16px;height:16px;accent-color:var(--accent)"> עיר</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-nbhd"  style="width:16px;height:16px;accent-color:var(--accent)"> שכונה</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-ramot" style="width:16px;height:16px;accent-color:var(--accent)"> רמות</label>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="printModalClose()" style="padding:8px 18px;border-radius:8px;border:1.5px solid var(--border);background:var(--g50);color:var(--fg);font-family:inherit;font-size:13px;cursor:pointer">ביטול</button>
+      <button onclick="printModalGo()" style="padding:8px 22px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">הדפס ⬅</button>
     </div>
   </div>
 </div>
