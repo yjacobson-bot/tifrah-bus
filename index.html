@@ -1233,11 +1233,15 @@ function toggleTheme(){
       <!-- איפוס רישום (מחיקה בלי שמירה) -->
       <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
         <div style="font-weight:700;font-size:15px;margin-bottom:6px">🗑️ מחיקה ללא שמירה</div>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 12px">מחיקת הרשומות בלי לשמור בארכיון.</p>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px">מחיקת הרשומות מהשלוחה בלי לשמור בארכיון.</p>
         <div id="admin-reset-confirm" hidden style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px;color:#991B1B">
-          <strong>⚠️ פעולה זו לא הפיכה!</strong> כל הרשומות יימחקו לצמיתות ללא גיבוי.
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button onclick="adminDoReset()" style="flex:1;height:36px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">מחק</button>
+          <strong>⚠️ פעולה זו לא הפיכה!</strong> כל הרשומות יימחקו לצמיתות.
+          <div style="margin-top:10px;margin-bottom:10px;padding:10px;background:rgba(255,255,255,.6);border-radius:6px;color:#92400E;font-size:12px">
+            💡 מומלץ להוריד גיבוי לפני המחיקה:
+            <button onclick="adminBackupAndReset()" style="display:block;width:100%;margin-top:8px;height:34px;background:#D97706;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">⬇ הורד Excel ואז מחק</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onclick="adminDoReset()" style="flex:1;height:36px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">מחק בלי גיבוי</button>
             <button onclick="qs('admin-reset-confirm').hidden=true" style="flex:1;height:36px;background:var(--g100);border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
           </div>
         </div>
