@@ -936,10 +936,12 @@ async function adminUpdateExtIni(newVal){
   try{
     // שלב 1: הורדה
     adminMsg('⏳ שלב 1/2: מוריד ext.ini…','#92400E');
-    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    const ac1=new AbortController();setTimeout(()=>ac1.abort(),12000);
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{signal:ac1.signal});
     if(!r.ok){adminMsg(`שגיאה בהורדה: HTTP ${r.status}`,'#991B1B');return}
     let txt=await r.text();
     if(!txt||txt.trim()===''){adminMsg('הקובץ ext.ini ריק או לא נמצא','#991B1B');return}
+    adminMsg(`✔ הורד (${txt.length} תווים) — מעדכן…`,'#92400E');
 
     // שלב 2: עריכה
     const hasActive=/^enter_foldar_end_time=.+$/m.test(txt);
@@ -966,12 +968,13 @@ async function adminUpdateExtIni(newVal){
       }
     }
 
-    // שלב 3: העלאה — multipart/form-data
+    // שלב 3: העלאה
     adminMsg('⏳ שלב 2/2: מעלה ext.ini…','#92400E');
+    const ac2=new AbortController();setTimeout(()=>ac2.abort(),12000);
     const form=new FormData();
     form.append('file',new Blob([txt],{type:'text/plain;charset=utf-8'}),'ext.ini');
     const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{
-      method:'POST',body:form
+      method:'POST',body:form,signal:ac2.signal
     });
     const upTxt=await up.text();
     if(upTxt.includes('responsetype=OK')||upTxt.toLowerCase().includes('ok')){
@@ -984,13 +987,17 @@ async function adminUpdateExtIni(newVal){
 }
 
 function adminMsg(msg,color){
-  // גיבוי: גם toast וגם הסטטוס הפנימי
-  const type=color==='#166534'?'success':color==='#991B1B'?'error':'warning';
-  showAlert(type,'',msg);
   try{
     const el=qs('admin-status');
-    if(el){el.textContent=msg;el.style.color=color;el.hidden=false;}
-  }catch{}
+    if(el){
+      el.textContent=msg;
+      el.style.color=color;
+      el.style.background=color==='#166534'?'#DCFCE7':color==='#991B1B'?'#FEE2E2':'#FEF3C7';
+      el.style.border=`1px solid ${color==='#166534'?'#86EFAC':color==='#991B1B'?'#FCA5A5':'#FCD34D'}`;
+      el.hidden=false;
+      el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  }catch(e){console.error('adminMsg error:',e)}
 }
 
 // ══════════════════════════════════════════════
