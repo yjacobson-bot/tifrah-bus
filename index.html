@@ -336,6 +336,9 @@ function ramotLabel(v){return RAMOT_MAP[String(v)]||''}
 // תרגום שמות עמודות טכניות לעברית
 function colLabel(k){
   if(FIELD_LABELS[k])return FIELD_LABELS[k];
+  if(k==='__last__')return'משפחה';
+  if(k==='__first__')return'שם פרטי';
+  if(k==='__shiur__')return'שיעור';
   const m={'ValName':'שם','Phone':'טלפון','Folder':'טלפון','phone':'טלפון','Date':'תאריך',
     'EnterDate':'תאריך כניסה','ExitDate':'תאריך יציאה','Status':'סטטוס',
     'Booking':'מספר הזמנה','DID':'מספר חייג','IncomingDID':'DID','var':'משתנה',
@@ -449,11 +452,36 @@ function parseYMGR(text){
 function buildColumns(records){
   const keys=[...new Set(records.flatMap(r=>Object.keys(r)))];
   // עמודות מועדפות קודם
-  const prio=['ValName','Phone','Date',CITY_KEY,NBHD_KEY,'P052','Status','Booking'];
+  const prio=['__last__','__first__','__shiur__','Phone','Date',CITY_KEY,NBHD_KEY,'P052','Status','Booking'];
   const hidden=['_path','_period','DID','IncomingDID','var','IdType','Data','Folder','HebrewDate','Time','EnterId','IdType'];
   _columns=keys.filter(k=>!hidden.includes(k));
+  // הוסף עמודות וירטואליות (לא קיימות ב-keys)
+  if(!_columns.includes('__last__'))_columns.push('__last__');
+  if(!_columns.includes('__first__'))_columns.push('__first__');
+  if(!_columns.includes('__shiur__'))_columns.push('__shiur__');
+  // הסר ValName — מוחלף ע"י __last__ ו-__first__
+  _columns=_columns.filter(k=>k!=='ValName');
   _columns.sort((a,b)=>{const ai=prio.indexOf(a),bi=prio.indexOf(b);
     if(ai<0&&bi<0)return a.localeCompare(b,'he');if(ai<0)return 1;if(bi<0)return-1;return ai-bi});
+}
+
+// פרסור ValName: "משפחה,שם פרטי,שיעור,אות" → {displayName, shiur}
+function parseValName(v){
+  if(!v)return{displayName:'',shiur:''};
+  const parts=v.split(',').map(s=>s.trim());
+  // מחפש "שיעור" בתוך החלקים
+  const si=parts.findIndex(p=>p==='שיעור');
+  let shiur='',nameParts;
+  if(si>=0){
+    shiur=parts[si+1]||'';
+    nameParts=parts.filter((_,i)=>i!==si&&i!==si+1);
+  } else {
+    nameParts=parts;
+  }
+  // פורמט: [משפחה, שם פרטי, ...]
+  const [last='',first='',...rest]=nameParts;
+  const displayName=[first,last,...rest].filter(Boolean).join(' ');
+  return{displayName,last,first:([first,...rest]).filter(Boolean).join(' '),shiur};
 }
 
 // ערך מוצג של רשומה בעמודה (עם תרגום לעברית)
@@ -462,6 +490,9 @@ function cellVal(rec,col){
   if(col===CITY_KEY)return cityLabel(v);
   if(col===NBHD_KEY)return nbhdLabel(v);
   if(col==='P052')return ramotLabel(v);
+  if(col==='__last__')return parseValName(rec['ValName']??'').last;
+  if(col==='__first__')return parseValName(rec['ValName']??'').first;
+  if(col==='__shiur__')return parseValName(rec['ValName']??'').shiur;
   return v;
 }
 
@@ -1038,8 +1069,8 @@ function adminMsg(msg,color){
 // ══════════════════════════════════════════════
 // ייצוא אקסל
 // ══════════════════════════════════════════════
-const EXCEL_COLS=['ValName','Phone',CITY_KEY,NBHD_KEY,'P052'];
-const EXCEL_HDRS=['שם','טלפון','עיר','שכונה','בתוך רמות'];
+const EXCEL_COLS=['__last__','__first__','__shiur__','Phone',CITY_KEY,NBHD_KEY,'P052'];
+const EXCEL_HDRS=['משפחה','שם פרטי','שיעור','טלפון','עיר','שכונה','בתוך רמות'];
 
 function buildExcelSheet(records){
   const rows=records.map(r=>EXCEL_COLS.map(c=>{
@@ -1067,13 +1098,15 @@ function exportExcel(){
 }
 
 const PRINT_COLS=[
-  {key:'name',  label:'שם',      fn:r=>esc(r.ValName||r.Name||'')},
+  {key:'last',  label:'משפחה',   fn:r=>esc(parseValName(r.ValName||'').last)},
+  {key:'first', label:'שם פרטי', fn:r=>esc(parseValName(r.ValName||'').first)},
+  {key:'shiur', label:'שיעור',   fn:r=>esc(parseValName(r.ValName||'').shiur)},
   {key:'phone', label:'טלפון',   fn:r=>`<span dir="ltr">${esc(r.Phone||r.Folder||'')}</span>`},
   {key:'city',  label:'עיר',     fn:r=>esc(cityLabel(r[CITY_KEY]))},
   {key:'nbhd',  label:'שכונה',   fn:r=>esc(nbhdLabel(r[NBHD_KEY]))},
   {key:'ramot', label:'רמות',    fn:r=>esc(ramotLabel(r[RAMOT_KEY])||'')},
 ];
-let _printColKeys=new Set(['name','phone','city','nbhd']);
+let _printColKeys=new Set(['last','first','shiur','phone','city']);
 
 function printDrill(){
   if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
@@ -1487,7 +1520,9 @@ function toggleTheme(){
     <h3 style="margin:0 0 18px;font-size:17px;color:var(--navy)">🖨 הגדרות הדפסה</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">בחר עמודות להדפסה:</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
-      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-name"  style="width:16px;height:16px;accent-color:var(--accent)"> שם</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-last"  style="width:16px;height:16px;accent-color:var(--accent)"> משפחה</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-first" style="width:16px;height:16px;accent-color:var(--accent)"> שם פרטי</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-shiur" style="width:16px;height:16px;accent-color:var(--accent)"> שיעור</label>
       <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-phone" style="width:16px;height:16px;accent-color:var(--accent)"> טלפון</label>
       <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-city"  style="width:16px;height:16px;accent-color:var(--accent)"> עיר</label>
       <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-nbhd"  style="width:16px;height:16px;accent-color:var(--accent)"> שכונה</label>
