@@ -107,6 +107,11 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .loading-logo{width:110px;height:110px;object-fit:contain;animation:spin-logo 1.4s cubic-bezier(.6,0,.4,1) infinite;filter:brightness(0)}
 @keyframes spin-logo{0%{transform:rotate(0deg) scale(1)}40%{transform:rotate(180deg) scale(1.08)}100%{transform:rotate(360deg) scale(1)}}
 .loading-text{font-size:15px;color:var(--fg);font-weight:500;letter-spacing:.03em;text-align:center}
+.sort-chip{display:inline-flex;align-items:center;gap:4px;background:var(--accent-dim);border:1px solid #93C5FD;border-radius:20px;padding:2px 8px 2px 4px;font-size:12px;font-weight:600;color:var(--accent)}
+.sort-chip button{background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:var(--accent);line-height:1}
+.sort-chip button:hover{color:var(--navy)}
+.sort-clear{background:none;border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit}
+.sort-clear:hover{background:var(--g100)}
 /* ══════════ הדגשת חיפוש ══════════ */
 mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
 :root[data-theme="dark"] mark,:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}
@@ -237,6 +242,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <button id="export-btn" class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
         <button class="btn-export" onclick="printDrill()" style="background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
       </div>
+      <div id="sort-bar" hidden style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;font-size:13px"></div>
       <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
       <div class="pager"><span id="page-info"></span><div class="pager-btns" id="page-btns"></div></div>
     </div>
@@ -306,7 +312,8 @@ let _token=null,_tokenAt=0,_records=[],_columns=[];
 const CITY_KEY='P050';
 const NBHD_KEY='P051';
 let _activeCity=null,_activeNbhd=null,_drillFiltered=[],_drillPage=1;
-let _drillSort=null,_drillSortAsc=true,_timerInterval=null,_cdCount=CONFIG.refreshSec,_paused=false;
+let _sortKeys=[],_timerInterval=null,_cdCount=CONFIG.refreshSec,_paused=false;
+// _sortKeys = [{col, asc}]  — מיון מרובה לפי סדר
 let _prevCount=null; // לזיהוי שינויים בין רענונים
 const PAGE_SIZE=50;
 const COL_CLS=['cc0','cc1','cc2','cc3','cc4','cc5','cc6','cc7','cc8','cc9','cc10','cc11'];
@@ -672,7 +679,7 @@ function renderDashboard(){
 
 function drillCity(raw){
   const city=raw.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');
-  _activeCity=city;_activeNbhd=null;_activeRamot=null;_drillPage=1;_drillSort=null;_drillSortAsc=true;
+  _activeCity=city;_activeNbhd=null;_activeRamot=null;_drillPage=1;_sortKeys=[];
   qs('ramot-section').hidden=true;
   qs('search-in').value='';
   const cityRecs=_records.filter(r=>cityLabel(r[CITY_KEY])===city);
@@ -782,18 +789,49 @@ function highlight(text,q){
   if(idx<0)return esc(s);
   return esc(s.slice(0,idx))+'<mark>'+esc(s.slice(idx,idx+q.length))+'</mark>'+esc(s.slice(idx+q.length));
 }
+function renderSortBar(){
+  const bar=qs('sort-bar');if(!bar)return;
+  if(!_sortKeys.length){bar.innerHTML='';bar.hidden=true;return;}
+  bar.hidden=false;
+  bar.innerHTML=`<span style="font-size:12px;color:var(--muted);font-weight:600">מיון:</span>`
+    +_sortKeys.map((sk,i)=>`
+      <span class="sort-chip">
+        <span style="font-size:11px;color:var(--muted)">${i+1}.</span>
+        ${esc(colLabel(sk.col))}
+        <button onclick="sortChipToggle(${i})" title="שנה כיוון">${sk.asc?'▲':'▼'}</button>
+        <button onclick="sortChipRemove(${i})" title="הסר">✕</button>
+      </span>`).join('')
+    +`<button class="sort-clear" onclick="sortClear()">נקה הכל</button>`;
+}
+function sortChipToggle(i){_sortKeys[i].asc=!_sortKeys[i].asc;renderDrillTable()}
+function sortChipRemove(i){_sortKeys.splice(i,1);renderDrillTable()}
+function sortClear(){_sortKeys=[];renderDrillTable()}
+
 function renderDrillTable(){
   let rows=[..._drillFiltered];
-  if(_drillSort)rows.sort((a,b)=>{
-    const av=cellVal(a,_drillSort),bv=cellVal(b,_drillSort);
-    const c=av<bv?-1:av>bv?1:0;return _drillSortAsc?c:-c
-  });
+  if(_sortKeys.length){
+    rows.sort((a,b)=>{
+      for(const sk of _sortKeys){
+        const av=cellVal(a,sk.col),bv=cellVal(b,sk.col);
+        const c=av<bv?-1:av>bv?1:0;
+        if(c!==0)return sk.asc?c:-c;
+      }
+      return 0;
+    });
+  }
   const total=rows.length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
   _drillPage=Math.max(1,Math.min(_drillPage,pages));
   const start=(_drillPage-1)*PAGE_SIZE,pageRows=rows.slice(start,start+PAGE_SIZE);
   qs('drill-thead').innerHTML='<tr><th class="idx" style="width:36px">#</th>'+
-    _columns.map(c=>{const s=_drillSort===c;return`<th class="${s?'sorted':''}" onclick="sortDrill('${c.replace(/'/g,"\\'")}')">
-      ${esc(colLabel(c))}<span class="sort-ico">${s?(_drillSortAsc?'▲':'▼'):'⇅'}</span></th>`}).join('')+'</tr>';
+    _columns.map(c=>{
+      const idx=_sortKeys.findIndex(sk=>sk.col===c);
+      const active=idx>=0;
+      const asc=active?_sortKeys[idx].asc:true;
+      const badge=active?`<sup style="font-size:9px;color:var(--accent)">${idx+1}</sup>`:'';
+      return`<th class="${active?'sorted':''}" onclick="sortDrill(event,'${c.replace(/'/g,"\\'")}')">
+        ${esc(colLabel(c))}${badge}<span class="sort-ico">${active?(asc?'▲':'▼'):'⇅'}</span></th>`;
+    }).join('')+'</tr>';
+  renderSortBar();
   qs('drill-tbody').innerHTML=pageRows.length
     ?pageRows.map((r,i)=>`<tr><td class="idx" data-label="#">${start+i+1}</td>${_columns.map(c=>{
         const v=cellVal(r,c);
@@ -815,9 +853,20 @@ function renderDrillTable(){
   qs('page-btns').innerHTML=b.join('');
 }
 function goPage(p){_drillPage=p;renderDrillTable()}
-function sortDrill(col){if(_drillSort===col)_drillSortAsc=!_drillSortAsc;else{_drillSort=col;_drillSortAsc=true}renderDrillTable()}
+function sortDrill(e,col){
+  // Shift+לחיצה = הוסף לרשימת מיון; לחיצה רגילה = מיון בודד
+  const idx=_sortKeys.findIndex(sk=>sk.col===col);
+  if(e.shiftKey){
+    if(idx>=0)_sortKeys[idx].asc=!_sortKeys[idx].asc;
+    else _sortKeys.push({col,asc:true});
+  } else {
+    if(idx>=0&&_sortKeys.length===1)_sortKeys[0].asc=!_sortKeys[0].asc;
+    else _sortKeys=[{col,asc:true}];
+  }
+  renderDrillTable();
+}
 function drillAll(){
-  _activeCity='__all__';_activeNbhd=null;_activeRamot=null;_drillPage=1;_drillSort=null;_drillSortAsc=true;
+  _activeCity='__all__';_activeNbhd=null;_activeRamot=null;_drillPage=1;_sortKeys=[];
   qs('search-in').value='';
   qs('drill-title').textContent='כל הבחורים';
   qs('drill-count').textContent=`${_records.length.toLocaleString('he')} בחורים`;
@@ -858,7 +907,7 @@ function togglePause(){
 function saveState(){
   return{city:_activeCity,nbhd:_activeNbhd,ramot:_activeRamot,
     q:qs('search-in')?qs('search-in').value:'',
-    sort:_drillSort,sortAsc:_drillSortAsc,page:_drillPage};
+    sortKeys:_sortKeys,page:_drillPage};
 }
 async function restoreState(s){
   if(!s||!s.city)return;
@@ -867,7 +916,7 @@ async function restoreState(s){
   if(s.nbhd){filterNbhd(s.nbhd);}
   if(s.ramot){filterRamot(s.ramot);}
   if(s.q&&qs('search-in')){qs('search-in').value=s.q;}
-  if(s.sort){_drillSort=s.sort;_drillSortAsc=s.sortAsc;}
+  if(s.sortKeys){_sortKeys=s.sortKeys;}
   _drillPage=s.page||1;
   applyDrillFilter();
 }
