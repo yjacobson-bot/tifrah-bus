@@ -864,7 +864,8 @@ async function adminBackupAndReset(){
 
 // איפוס רישום — מחיקת ApprovalAll.ymgr
 async function adminDoReset(){
-  const tok=await getToken();if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
+  let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
+  if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
   adminMsg('מוחק…','#92400E');
   try{
     const r=await fetch(`${API}DeleteFile?token=${tok}&path=ivr2:${CONFIG.folder}/ApprovalAll.ymgr`);
@@ -881,7 +882,8 @@ async function adminDoReset(){
 
 // טעינת הגדרת זמן נוכחית מ-ext.ini
 async function adminLoadExtTime(){
-  const tok=await getToken();if(!tok)return;
+  let tok;try{tok=await ensureToken();}catch{return}
+  if(!tok)return;
   try{
     const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
     if(!r.ok)return;
@@ -930,7 +932,8 @@ async function adminRemoveTime(){
 
 // עדכון ext.ini — רק שורת enter_foldar_end_time, הכל אחר נשאר שלם
 async function adminUpdateExtIni(newVal){
-  const tok=await getToken();
+  let tok;
+  try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: לא ניתן להתחבר — '+e.message,'#991B1B');return}
   if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
 
   try{
