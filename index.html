@@ -998,12 +998,11 @@ async function adminDoReset(){
       qs('admin-reset-confirm').hidden=true;
       _prevCount=null; _records=[];
       renderDashboard();
-    } else if(t.includes('name is not allowed')||t.includes('EXCEPTION')){
-      adminMsg('⚠️ לא ניתן למחוק אוטומטית — מחק ידנית בפורטל ימות את הקובץ <strong>ApprovalAll.ymgr</strong> מתיקייה ' + CONFIG.folder,'#92400E');
     } else {
-      adminMsg('שגיאה במחיקה: '+t,'#991B1B');
+      // מחיקה נכשלה — הצג הנחיה ברורה על המסך
+      showAlert('warning','יש למחוק ידנית בפורטל ימות',`מחק את הקובץ ApprovalAll.ymgr מתיקייה ${CONFIG.folder}`);
     }
-  }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
+  }catch(e){showAlert('error','שגיאת רשת',e.message)}
 }
 
 // טעינת הגדרת זמן נוכחית מ-ext.ini
