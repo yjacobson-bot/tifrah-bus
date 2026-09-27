@@ -212,7 +212,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div class="search-row">
         <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
-        <button class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
+        <button id="export-btn" class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
       </div>
       <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
       <div class="pager"><span id="page-info"></span><div class="pager-btns" id="page-btns"></div></div>
@@ -713,6 +713,7 @@ function applyDrillFilter(){
   const q=(qs('search-in').value||'').toLowerCase();
   _drillFiltered=q?base.filter(r=>_columns.some(c=>String(cellVal(r,c)).toLowerCase().includes(q))):base;
   renderDrillTable();
+  updateExportBtn();
 }
 
 function highlight(text,q){
@@ -764,7 +765,7 @@ function drillAll(){
   qs('nbhd-section').hidden=true;
   qs('ramot-section').hidden=true;
   qs('view-dashboard').hidden=true;qs('view-city').hidden=false;
-  _drillFiltered=_records;renderDrillTable();
+  _drillFiltered=_records;renderDrillTable();updateExportBtn();
 }
 function backToDash(){_activeCity=null;_activeNbhd=null;qs('view-city').hidden=true;qs('view-dashboard').hidden=false}
 
@@ -1027,10 +1028,24 @@ function exportExcel(){
   try{
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,buildExcelSheet(_drillFiltered),'בחורים');
-    const fname=`תפרח_רישום_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.xlsx`;
+    const cityPart=_activeCity?`_${_activeCity}`:'';
+    const nbhdPart=_activeNbhd?`_${_activeNbhd}`:'';
+    const fname=`תפרח_רישום${cityPart}${nbhdPart}_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.xlsx`;
     XLSX.writeFile(wb,fname);
     showAlert('success','קובץ אקסל הורד',fname);
   }catch(e){showAlert('error','שגיאה בייצוא',e.message)}
+}
+
+function updateExportBtn(){
+  const btn=document.getElementById('export-btn');
+  if(!btn)return;
+  const count=_drillFiltered?_drillFiltered.length:0;
+  if(_activeCity){
+    const label=_activeNbhd?`${_activeCity} / ${_activeNbhd}`:_activeCity;
+    btn.textContent=`⬇ Excel — ${label} (${count})`;
+  } else {
+    btn.textContent=`⬇ ייצא Excel (${count})`;
+  }
 }
 
 function toggleTheme(){
