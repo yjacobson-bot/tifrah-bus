@@ -316,6 +316,8 @@ let _activeCity=null,_activeNbhd=null,_drillFiltered=[],_drillPage=1;
 let _sortKeys=[],_timerInterval=null,_cdCount=CONFIG.refreshSec,_paused=false;
 // _sortKeys = [{col, asc}]  — מיון מרובה לפי סדר
 let _prevCount=null; // לזיהוי שינויים בין רענונים
+let _dataFingerprint=null; // לרענון חכם — מרענן תצוגה רק אם השתנה
+let _blockedCities=new Set(); // ערים חסומות (לפי שם)
 const PAGE_SIZE=50;
 const COL_CLS=['cc0','cc1','cc2','cc3','cc4','cc5','cc6','cc7','cc8','cc9','cc10','cc11'];
 
@@ -584,7 +586,10 @@ async function loadData(){
       showAlert('success',title,`${cityStr} · סה"כ: ${_records.length.toLocaleString('he')}`);
     }
     _prevCount=_records.length;
-    renderDashboard();
+    // רענון חכם — רק אם הנתונים השתנו
+    const fp=_records.length+'|'+(_records[_records.length-1]?.[CITY_KEY]||'')+(_records[0]?.Phone||_records[0]?.Folder||'');
+    if(fp!==_dataFingerprint){_dataFingerprint=fp;renderDashboard();}
+    else{setStatus('ok','מעודכן');}
   }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`}
 }
 
@@ -660,17 +665,18 @@ function renderDashboard(){
   </div>`;
   const totalBuses=Math.ceil(knownTotal/55);
   cities.forEach(([city,count],i)=>{
+    const blocked=_blockedCities.has(city);
     const pct=Math.round(count/knownTotal*1000)/10,fw=Math.round(count/maxN*100);
     const fullBuses=Math.floor(count/55),remainder=count%55;
     const busLine=remainder>0
       ?`<span style="font-weight:700">${fullBuses} אוטובוס${fullBuses!==1?'ים':''}</span> <span style="opacity:.6;font-size:11px">+ ${remainder} נוספים</span>`
       :`<span style="font-weight:700">${fullBuses} אוטובוס${fullBuses!==1?'ים':''}</span>`;
-    html+=`<div class="city-card ${COL_CLS[i%12]}" data-city="${esc(city)}" onclick="drillCity(this.dataset.city)">
-      <div class="city-count">${count.toLocaleString('he')}</div>
-      <div class="city-name">${esc(city)}</div>
-      <div class="city-pct">${pct}%</div>
-      <div style="font-size:12px;opacity:.85;margin-top:4px">${busLine}</div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${fw}%"></div></div>
+    html+=`<div class="city-card ${COL_CLS[i%12]}${blocked?' city-blocked':''}" data-city="${esc(city)}" onclick="${blocked?'':' drillCity(this.dataset.city)'}" style="${blocked?'opacity:.45;cursor:not-allowed;':'' }">
+      <div class="city-count">${blocked?'🔒':count.toLocaleString('he')}</div>
+      <div class="city-name">${esc(city)}${blocked?'<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#DC2626;margin-top:2px">חסומה</div>':''}</div>
+      ${!blocked?`<div class="city-pct">${pct}%</div>`:''}
+      ${!blocked?`<div style="font-size:12px;opacity:.85;margin-top:4px">${busLine}</div>`:''}
+      ${!blocked?`<div class="bar-bg"><div class="bar-fill" style="width:${fw}%"></div></div>`:''}
     </div>`;
   });
   qs('city-grid').innerHTML=html;
@@ -958,7 +964,7 @@ function adminLogin(){
     qs('admin-panel').hidden=false;
     qs('admin-reset-confirm').hidden=true;
     qs('close-reg-confirm').hidden=true;
-    adminLoadExtTime();
+    adminLoadExtTime();loadBlockedCities();renderAdminCities();
     renderSnapList();
   } else {
     qs('admin-err').hidden=false;
@@ -1021,26 +1027,22 @@ async function adminLoadExtTime(){
     const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
     if(!r.ok)return;
     const txt=await r.text();
-    // מחפשים שורה (אפשר עם ; בהתחלה)
-    const m=txt.match(/^;?\s*enter_foldar_end_time=(.+)$/m);
-    const active=txt.match(/^enter_foldar_end_time=(.+)$/m); // ללא ;
+    // שעת סגירה
+    const endActive=txt.match(/^enter_foldar_end_time=(.+)$/m);
+    const endAny=txt.match(/^;?\s*enter_foldar_end_time=(.+)$/m);
     const div=qs('admin-cur-time');
-    if(m){
-      const val=m[1].trim();
-      const isActive=!!active;
-      div.innerHTML=isActive
-        ?`⏰ מגבלה פעילה: <strong>${val.replace(/-/g,'-')}</strong>`
-        :`מגבלה מוגדרת אך מושבתת (עם ;): <strong>${val}</strong>`;
-      div.hidden=false;
-      // מלא את ה-input עם הערך הנוכחי
-      if(isActive){
-        const parts=val.split('-'); // [YYYY,MM,DD,HH,MM,SS]
-        if(parts.length>=5){
-          qs('admin-dt').value=`${parts[0]}-${parts[1]}-${parts[2]}T${parts[3]}:${parts[4]}`;
-        }
-      }
-    } else {
-      div.hidden=true;
+    const parts2dt=v=>{const p=v.trim().split('-');return p.length>=5?`${p[0]}-${p[1]}-${p[2]}T${p[3]}:${p[4]}`:''};
+    if(endActive){
+      const val=endActive[1].trim();
+      div.innerHTML=`🔴 סגירה פעילה: <strong>${val}</strong>`;div.hidden=false;
+      const el=qs('admin-dt');if(el)el.value=parts2dt(val);
+    } else if(endAny){
+      div.innerHTML=`שעת סגירה (מושבתת): <strong>${endAny[1].trim()}</strong>`;div.hidden=false;
+    } else {div.hidden=true;}
+    // שעת פתיחה
+    const startActive=txt.match(/^enter_foldar_start_time=(.+)$/m);
+    if(startActive){
+      const el=qs('admin-start-dt');if(el)el.value=parts2dt(startActive[1]);
     }
   }catch{}
 }
@@ -1120,6 +1122,98 @@ async function adminUpdateExtIni(newVal){
       adminMsg('שרת השיב: '+upTxt.slice(0,120),'#991B1B');
     }
   }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
+}
+
+// ── שעת פתיחה (enter_foldar_start_time) ──
+async function adminSetStartTime(){
+  const dtVal=qs('admin-start-dt').value;
+  if(!dtVal){adminMsg('⚠️ בחר תאריך ושעה תחילה','#92400E');return}
+  adminMsg('⏳ מעבד…','#92400E');
+  const [date,time]=dtVal.split('T');const [h,m]=time.split(':');
+  await adminUpdateExtIniLine('enter_foldar_start_time',`${date}-${h}-${m}-00`);
+}
+async function adminRemoveStartTime(){
+  adminMsg('⏳ מעבד…','#92400E');
+  await adminUpdateExtIniLine('enter_foldar_start_time',null);
+}
+async function adminUpdateExtIniLine(key,newVal){
+  let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
+  if(!tok){adminMsg('שגיאה: לא ניתן להתחבר','#991B1B');return}
+  try{
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+    if(!r.ok){adminMsg(`שגיאה ${r.status}`,'#991B1B');return}
+    let txt=await r.text();
+    if(!txt||!txt.trim()){adminMsg('ext.ini ריק','#991B1B');return}
+    const re=new RegExp(`^;?\\s*${key}=.+$`,'m');
+    const activeRe=new RegExp(`^${key}=.+$`,'m');
+    const hasActive=activeRe.test(txt),hasComment=!hasActive&&re.test(txt);
+    if(newVal){
+      const newLine=`${key}=${newVal}`;
+      if(hasActive)txt=txt.replace(activeRe,newLine);
+      else if(hasComment)txt=txt.replace(re,newLine);
+      else{const ls=txt.split('\n');ls.splice(1,0,newLine);txt=ls.join('\n');}
+    } else {
+      if(hasActive)txt=txt.replace(activeRe,`;${key}=${txt.match(activeRe)[0].split('=').slice(1).join('=')}`);
+      else{adminMsg('לא נמצאה הגדרה','#92400E');return;}
+    }
+    const form=new FormData();
+    form.append('file',new Blob([txt],{type:'text/plain;charset=utf-8'}),'ext.ini');
+    const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{method:'POST',body:form});
+    const upTxt=await up.text();
+    if(upTxt.includes('responsetype=OK')||upTxt.toLowerCase().includes('ok')){
+      adminMsg(newVal?`✅ עודכן`:'✅ הוסר','#166534');adminLoadExtTime();
+    } else {adminMsg('שגיאה: '+upTxt.slice(0,80),'#991B1B');}
+  }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
+}
+
+// ── ניהול ערים חסומות ──
+const BLOCKED_FILE=`ivr2:${CONFIG.folder}/blocked_cities.ini`;
+async function loadBlockedCities(){
+  let tok;try{tok=await ensureToken();}catch{return}
+  if(!tok)return;
+  try{
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=${encodeURIComponent(BLOCKED_FILE)}`);
+    if(!r.ok){_blockedCities=new Set();return;}
+    const txt=await r.text();
+    _blockedCities=new Set(txt.split('\n').map(s=>s.trim()).filter(Boolean));
+    renderDashboard();
+  }catch{_blockedCities=new Set();}
+}
+async function adminSaveBlockedCities(){
+  let tok;try{tok=await ensureToken();}catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');return}
+  const txt=[..._blockedCities].join('\n');
+  const form=new FormData();
+  form.append('file',new Blob([txt],{type:'text/plain;charset=utf-8'}),'blocked_cities.ini');
+  try{
+    const up=await fetch(`${API}UploadFile?token=${tok}&path=${encodeURIComponent(BLOCKED_FILE)}`,{method:'POST',body:form});
+    const t=await up.text();
+    if(t.includes('responsetype=OK')||t.toLowerCase().includes('ok')){
+      adminMsg('✅ רשימת הערים עודכנה','#166534');renderAdminCities();renderDashboard();
+    } else adminMsg('שגיאה בשמירה: '+t.slice(0,80),'#991B1B');
+  }catch(e){adminMsg('שגיאת רשת: '+e.message,'#991B1B')}
+}
+function adminToggleCity(name){
+  if(_blockedCities.has(name))_blockedCities.delete(name);
+  else _blockedCities.add(name);
+  adminSaveBlockedCities();
+}
+function renderAdminCities(){
+  const el=qs('admin-cities-list');if(!el)return;
+  // כל הערים הידועות מ-CITY_MAP
+  const all=Object.entries(CITY_MAP).sort((a,b)=>a[1].localeCompare(b[1],'he'));
+  if(!all.length){el.innerHTML='<p style="font-size:13px;color:var(--muted)">אין ערים מוגדרות</p>';return;}
+  el.innerHTML=all.map(([key,name])=>{
+    const blocked=_blockedCities.has(name);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px${blocked?';color:var(--muted);text-decoration:line-through':''}">
+        ${esc(name)} <span style="font-size:11px;color:var(--muted)">(${key})</span>
+      </span>
+      <button onclick="adminToggleCity('${esc(name)}')"
+        style="padding:3px 10px;font-size:12px;font-family:inherit;border-radius:6px;cursor:pointer;border:none;font-weight:700;background:${blocked?'#DCFCE7':'#FEE2E2'};color:${blocked?'#166534':'#991B1B'}">
+        ${blocked?'✓ פתח':'🔒 חסום'}
+      </button>
+    </div>`;
+  }).join('');
 }
 
 function adminMsg(msg,color){
@@ -1608,17 +1702,36 @@ function toggleTheme(){
       </div>
 
       <!-- הגבלת זמן -->
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px">
-        <div style="font-weight:700;font-size:15px;margin-bottom:6px">⏰ הגבלת זמן רישום</div>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">הגדר שעת סגירה לשלוחה</p>
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">⏰ זמני רישום</div>
         <div id="admin-cur-time" hidden style="background:var(--amber-bg);color:#92400E;border:1px solid #FCD34D;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px"></div>
-        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">תאריך ושעת סגירה:</label>
-        <input id="admin-dt" type="datetime-local"
-          style="width:100%;height:40px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:14px;direction:ltr;box-sizing:border-box;outline:none">
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button onclick="adminSetTime()" style="flex:1;height:38px;background:#2563EB;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">הגדר מגבלה</button>
-          <button onclick="adminRemoveTime()" style="flex:1;height:38px;background:var(--g100);color:var(--text);border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px">הסר מגבלה</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;color:var(--muted)">🟢 שעת פתיחה</label>
+            <input id="admin-start-dt" type="datetime-local"
+              style="width:100%;height:38px;padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;direction:ltr;box-sizing:border-box;outline:none">
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button onclick="adminSetStartTime()" style="flex:1;height:32px;background:#166534;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:12px">הגדר</button>
+              <button onclick="adminRemoveStartTime()" style="flex:1;height:32px;background:var(--g100);color:var(--text);border:1.5px solid var(--border);border-radius:7px;font-family:inherit;cursor:pointer;font-size:12px">הסר</button>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;color:var(--muted)">🔴 שעת סגירה</label>
+            <input id="admin-dt" type="datetime-local"
+              style="width:100%;height:38px;padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;direction:ltr;box-sizing:border-box;outline:none">
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button onclick="adminSetTime()" style="flex:1;height:32px;background:#DC2626;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:12px">הגדר</button>
+              <button onclick="adminRemoveTime()" style="flex:1;height:32px;background:var(--g100);color:var(--text);border:1.5px solid var(--border);border-radius:7px;font-family:inherit;cursor:pointer;font-size:12px">הסר</button>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <!-- ניהול ערים -->
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px">🏙️ ניהול ערים</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 10px">חסימת עיר תסתיר אותה מהרישום ותסמן אותה כחסומה בדשבורד.</p>
+        <div id="admin-cities-list"></div>
       </div>
 
       <div id="admin-status" hidden style="font-size:14px;margin:12px 0 0;padding:10px 14px;border-radius:8px;background:var(--g100);font-weight:600;text-align:center"></div>
