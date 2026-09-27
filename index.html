@@ -261,7 +261,7 @@ const CITY_KEY='P050';
 const NBHD_KEY='P051';
 let _activeCity=null,_activeNbhd=null,_drillFiltered=[],_drillPage=1;
 let _drillSort=null,_drillSortAsc=true,_timerInterval=null,_cdCount=CONFIG.refreshSec,_paused=false;
-let _prevCount=null,_prevPhones=null; // לזיהוי שינויים בין רענונים
+let _prevCount=null; // לזיהוי שינויים בין רענונים
 const PAGE_SIZE=50;
 const COL_CLS=['cc0','cc1','cc2','cc3','cc4','cc5','cc6','cc7','cc8','cc9','cc10','cc11'];
 
@@ -488,21 +488,16 @@ async function loadData(){
       _records=[...byPhone.values()];
     }
     buildColumns(_records);
-    // התראה על רשומות חדשות — השוואה לפי טלפון
-    const phoneKey=r=>r['_phone']||r['Folder']||r['Phone']||r['phone']||r['DID']||r['IncomingDID']||'';
-    const curPhones=new Set(_records.map(phoneKey));
-    if(_prevPhones!==null){
-      const newRecs=_records.filter(r=>{const p=phoneKey(r);return p&&!_prevPhones.has(p)});
-      if(newRecs.length>0){
-        const diff=newRecs.length;
-        const cityCounts={};
-        newRecs.forEach(r=>{const c=cityLabel(r[CITY_KEY]);if(c!=='(לא ידוע)')cityCounts[c]=(cityCounts[c]||0)+1});
-        const cityStr=Object.entries(cityCounts).map(([c,n])=>n>1?`${n} ${c}`:c).join(', ')||'';
-        const title=diff===1?`נרשם חדש אחד!`:`נוספו ${diff} נרשמים חדשים!`;
-        showAlert('success',title,`${cityStr?cityStr+' · ':''}סה"כ: ${_records.length.toLocaleString('he')}`);
-      }
+    // התראה על רשומות חדשות
+    if(_prevCount!==null&&_records.length>_prevCount){
+      const diff=_records.length-_prevCount;
+      const newRecs=_records.slice(-diff);
+      const cityCounts={};
+      newRecs.forEach(r=>{const c=cityLabel(r[CITY_KEY]);cityCounts[c]=(cityCounts[c]||0)+1});
+      const cityStr=Object.entries(cityCounts).map(([c,n])=>n>1?`${n} ${c}`:c).join(', ');
+      const title=diff===1?`נרשם חדש אחד!`:`נוספו ${diff} נרשמים חדשים!`;
+      showAlert('success',title,`${cityStr} · סה"כ: ${_records.length.toLocaleString('he')}`);
     }
-    _prevPhones=curPhones;
     _prevCount=_records.length;
     renderDashboard();
   }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`}
