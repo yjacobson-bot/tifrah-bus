@@ -562,7 +562,7 @@ function renderDashboard(){
   const knownTotal=cities.reduce((s,[,n])=>s+n,0);
   const total=_records.length;
   const fullBusTotal=Math.floor(total/55),remTotal=total%55;
-  const busTotalLabel=remTotal>0?`🚌 ${fullBusTotal}+${remTotal} סה"כ`:`🚌 ${fullBusTotal} אוטובוסים סה"כ`;
+  const busTotalLabel=remTotal>0?`🚌 ${fullBusTotal} אוטובוסים + ${remTotal} נוספים`:`🚌 ${fullBusTotal} אוטובוסים`;
   qs('dash-meta').textContent=`${total.toLocaleString('he')} בחורים · ${cities.length} ערים · ${busTotalLabel}`;
   const maxN=cities[0]?.[1]||1;
   let html=`<div class="city-card city-card-total" onclick="drillAll()" style="cursor:pointer">
