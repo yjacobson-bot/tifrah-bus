@@ -840,7 +840,9 @@ function adminLogin(){
     qs('admin-login').hidden=true;
     qs('admin-panel').hidden=false;
     qs('admin-reset-confirm').hidden=true;
+    qs('close-reg-confirm').hidden=true;
     adminLoadExtTime();
+    renderSnapList();
   } else {
     qs('admin-err').hidden=false;
     qs('admin-pwd-input').value='';
@@ -1048,6 +1050,116 @@ function updateExportBtn(){
   }
 }
 
+// ══════════════════════════════════════════════
+// ארכיון תמונות מצב
+// ══════════════════════════════════════════════
+const SNAP_KEY='tifrah_snapshots';
+function snapList(){try{return JSON.parse(localStorage.getItem(SNAP_KEY)||'[]')}catch{return[]}}
+
+function snapSave(name){
+  if(!_records||!_records.length){adminMsg('אין נתונים לשמירה','#92400E');return false}
+  const cities={};
+  _records.forEach(r=>{const c=cityLabel(r[CITY_KEY]);cities[c]=(cities[c]||0)+1});
+  const snap={
+    id:Date.now(),
+    name:name||`תמונת מצב ${new Date().toLocaleDateString('he')}`,
+    date:new Date().toISOString(),
+    total:_records.length,
+    cities:Object.entries(cities).sort((a,b)=>b[1]-a[1]),
+    records:_records
+  };
+  const snaps=snapList();snaps.unshift(snap);if(snaps.length>30)snaps.length=30;
+  try{localStorage.setItem(SNAP_KEY,JSON.stringify(snaps));renderSnapList();return true}
+  catch(e){adminMsg('שגיאה בשמירה: '+e.message,'#991B1B');return false}
+}
+
+function snapDelete(id){
+  try{localStorage.setItem(SNAP_KEY,JSON.stringify(snapList().filter(s=>s.id!==id)));renderSnapList()}catch{}
+}
+
+function snapExport(){
+  const snaps=snapList();
+  if(!snaps.length){adminMsg('אין תמונות מצב לייצוא','#92400E');return}
+  const blob=new Blob([JSON.stringify(snaps,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  a.download=`תפרח_ארכיון_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  adminMsg(`✅ יוצאו ${snaps.length} תמונות מצב`,'#166534');
+}
+
+function snapImport(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(!Array.isArray(imported))throw new Error('פורמט לא תקין');
+      const existing=snapList();
+      const existIds=new Set(existing.map(s=>s.id));
+      const newOnes=imported.filter(s=>!existIds.has(s.id));
+      const merged=[...existing,...newOnes].sort((a,b)=>b.id-a.id).slice(0,30);
+      localStorage.setItem(SNAP_KEY,JSON.stringify(merged));
+      adminMsg(`✅ יובאו ${newOnes.length} תמונות מצב חדשות`,'#166534');
+      renderSnapList();
+    }catch(err){adminMsg('שגיאה בייבוא: '+err.message,'#991B1B')}
+  };
+  reader.readAsText(file);input.value='';
+}
+
+function snapExcelOne(id){
+  const snap=snapList().find(s=>s.id===id);
+  if(!snap){adminMsg('לא נמצא','#991B1B');return}
+  try{
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,buildExcelSheet(snap.records),'בחורים');
+    wb.Workbook={Views:[{RTL:true}]};
+    const d=new Date(snap.date);
+    const stamp=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    XLSX.writeFile(wb,`תפרח_${snap.name}_${stamp}.xlsx`);
+    adminMsg(`✅ הורד Excel: ${snap.name}`,'#166534');
+  }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B')}
+}
+
+function renderSnapList(){
+  const el=document.getElementById('snap-list');if(!el)return;
+  const snaps=snapList();
+  if(!snaps.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:10px 0">אין רישומים שמורים</div>';
+    return;
+  }
+  el.innerHTML=snaps.map(s=>{
+    const d=new Date(s.date);
+    const dateStr=d.toLocaleDateString('he')+' '+d.toLocaleTimeString('he',{hour:'2-digit',minute:'2-digit'});
+    const cityStr=s.cities.slice(0,3).map(([n,c])=>`${n} (${c})`).join(' · ');
+    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${esc(s.name)}</div>
+          <div style="font-size:12px;color:var(--muted);margin:2px 0">${dateStr} · <strong>${s.total.toLocaleString('he')}</strong> בחורים</div>
+          <div style="font-size:11px;color:var(--muted)">${esc(cityStr)}</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button onclick="snapExcelOne(${s.id})" title="ייצא Excel" style="height:28px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--g100);font-size:12px;cursor:pointer">📊 Excel</button>
+          <button onclick="snapDelete(${s.id})" title="מחק" style="height:28px;padding:0 8px;border:1px solid #FCA5A5;border-radius:6px;background:#FEE2E2;color:#991B1B;font-size:11px;cursor:pointer">🗑</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// סגירת רישום: שמור + אפס שלוחה
+async function adminCloseRegistration(){
+  const nameEl=document.getElementById('snap-name-input');
+  const name=(nameEl?nameEl.value.trim():'')||`רישום ${new Date().toLocaleDateString('he')}`;
+  adminMsg('⏳ שומר תמונת מצב…','#92400E');
+  const saved=snapSave(name);
+  if(!saved)return;
+  adminMsg('⏳ מוחק קובץ רשומות…','#92400E');
+  await adminDoReset();
+  if(nameEl)nameEl.value='';
+}
+
 function toggleTheme(){
   const root=document.documentElement;
   const cur=root.getAttribute('data-theme');
@@ -1086,22 +1198,48 @@ function toggleTheme(){
     <!-- פאנל אחרי כניסה -->
     <div id="admin-panel" hidden>
 
-      <!-- איפוס רישום -->
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
-        <div style="font-weight:700;font-size:15px;margin-bottom:6px">🗑️ איפוס רשימת בחורים</div>
-        <p style="font-size:13px;color:var(--muted);margin:0 0 12px">מחיקת קובץ הרשומות מהשלוחה — הרישום יתחיל מחדש מאפס.</p>
-        <div id="admin-reset-confirm" hidden style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px;color:#991B1B">
-          <strong>⚠️ פעולה זו לא הפיכה!</strong> כל הרשומות יימחקו לצמיתות.
-          <div style="margin-top:10px;margin-bottom:10px;padding:10px;background:rgba(255,255,255,.6);border-radius:6px;color:#92400E;font-size:12px">
-            💡 מומלץ להוריד גיבוי לפני המחיקה:
-            <button onclick="adminBackupAndReset()" style="display:block;width:100%;margin-top:8px;height:34px;background:#D97706;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">⬇ הורד Excel ואז מחק</button>
+      <!-- סגירת רישום -->
+      <div style="border:1.5px solid #86EFAC;border-radius:12px;padding:16px;margin-bottom:16px;background:var(--green-bg)">
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--green)">✅ סגור רישום</div>
+        <p style="font-size:13px;color:var(--green);margin:0 0 10px;opacity:.85">שומר את הרשימה הנוכחית בארכיון ומאפס את השלוחה לרישום הבא.</p>
+        <input id="snap-name-input" type="text" placeholder="שם הרישום (למשל: שמחת בית השואבה תשפ״ה)"
+          style="width:100%;height:38px;padding:0 12px;border:1.5px solid #86EFAC;border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;direction:rtl;outline:none;box-sizing:border-box;margin-bottom:8px">
+        <div id="close-reg-confirm" hidden style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:#991B1B">
+          <strong>⚠️ לאחר הסגירה השלוחה תתאפס!</strong> הנתונים יישמרו בארכיון כאן.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="adminCloseRegistration()" style="flex:1;height:34px;background:#166534;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">כן, שמור וסגור</button>
+            <button onclick="qs('close-reg-confirm').hidden=true" style="flex:1;height:34px;background:var(--g100);border:1px solid var(--border);border-radius:7px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
           </div>
-          <div style="display:flex;gap:8px">
-            <button onclick="adminDoReset()" style="flex:1;height:36px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">מחק בלי גיבוי</button>
+        </div>
+        <button onclick="qs('close-reg-confirm').hidden=false" style="width:100%;height:38px;background:#166534;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">שמור בארכיון ואפס שלוחה</button>
+      </div>
+
+      <!-- ארכיון רישומים -->
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="font-weight:700;font-size:15px">📂 ארכיון רישומים</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="snapExport()" style="height:28px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--g100);font-size:12px;cursor:pointer;font-family:inherit">⬇ ייצוא</button>
+            <label style="height:28px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--g100);font-size:12px;cursor:pointer;display:flex;align-items:center">
+              ⬆ ייבוא<input type="file" accept=".json" onchange="snapImport(this)" style="display:none">
+            </label>
+          </div>
+        </div>
+        <div id="snap-list"></div>
+      </div>
+
+      <!-- איפוס רישום (מחיקה בלי שמירה) -->
+      <div style="border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px">🗑️ מחיקה ללא שמירה</div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px">מחיקת הרשומות בלי לשמור בארכיון.</p>
+        <div id="admin-reset-confirm" hidden style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px;color:#991B1B">
+          <strong>⚠️ פעולה זו לא הפיכה!</strong> כל הרשומות יימחקו לצמיתות ללא גיבוי.
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button onclick="adminDoReset()" style="flex:1;height:36px;background:#DC2626;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">מחק</button>
             <button onclick="qs('admin-reset-confirm').hidden=true" style="flex:1;height:36px;background:var(--g100);border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
           </div>
         </div>
-        <button onclick="qs('admin-reset-confirm').hidden=false" style="width:100%;height:38px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">מחק רשימת בחורים</button>
+        <button onclick="qs('admin-reset-confirm').hidden=false" style="width:100%;height:38px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">מחק ללא שמירה</button>
       </div>
 
       <!-- הגבלת זמן -->
