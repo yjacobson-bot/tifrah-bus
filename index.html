@@ -556,8 +556,7 @@ async function loadData(){
       }
     }
     if(!found.length){
-      showAlert('warning','לא נמצאו נתונים',`לא מצאנו קבצי YMGR בשלוחה ${folder}.`);
-      qs('city-grid').innerHTML='<div class="empty"><div class="ico">📭</div><p>אין נתונים</p></div>';
+      qs('city-grid').innerHTML=`<div class="loading-wrap"><img class="loading-logo" src="${_LOGO_SRC}" alt=""><p class="loading-text">הנתונים יעודכנו מייד כשהראשון יירשם</p></div>`;
       return;
     }
     const sample=found[0]||{};
@@ -992,12 +991,10 @@ async function adminDoReset(){
   try{
     // קבל רשימת קבצים בתיקייה
     const {files}=await getDir(CONFIG.folder);
-    const ymgrFiles=files.filter(f=>f&&f.toLowerCase().endsWith('.ymgr'));
-    if(!ymgrFiles.length){
-      adminMsg('✅ אין קבצי רישום — התיקייה כבר ריקה.','#166534');
-      qs('admin-reset-confirm').hidden=true;
-      _prevCount=null;_records=[];renderDashboard();return;
-    }
+    const ymgrSet=new Set(files.filter(f=>f&&f.toLowerCase().endsWith('.ymgr')));
+    // תמיד כלול קובץ זה גם אם getDir לא מחזיר אותו
+    ymgrSet.add('LogRecordingAndEnteringData.ymgr');
+    const ymgrFiles=[...ymgrSet];
     adminMsg(`מוחק ${ymgrFiles.length} קבצים…`,'#92400E');
     // מחק את כל הקבצים בקריאה אחת (what0, what1, ...)
     const params=ymgrFiles.map((f,i)=>`what${i}=${encodeURIComponent('ivr2:'+CONFIG.folder+'/'+f)}`).join('&');
@@ -1006,7 +1003,7 @@ async function adminDoReset(){
     console.log('FileAction delete:',t);
     const ok=t.includes('"success":true')||t.includes('responsetype=OK');
     if(ok){
-      adminMsg(`✅ נמחקו ${ymgrFiles.length} קבצים! רישום חדש יתחיל כשמישהו יירשם.`,'#166534');
+      adminMsg('✅ הרישום אופס! נתונים חדשים יופיעו כשמישהו יירשם.','#166534');
       qs('admin-reset-confirm').hidden=true;
       _prevCount=null;_records=[];renderDashboard();
     } else {
