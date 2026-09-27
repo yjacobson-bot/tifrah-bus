@@ -1077,14 +1077,14 @@ let _printColKeys=new Set(['name','phone','city','nbhd']);
 
 function printDrill(){
   if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
-  document.getElementById('print-modal').hidden=false;
+  const pm=document.getElementById('print-modal');pm.style.display='flex';
   // sync checkboxes
   PRINT_COLS.forEach(c=>{
     const cb=document.getElementById('pcol-'+c.key);
     if(cb)cb.checked=_printColKeys.has(c.key);
   });
 }
-function printModalClose(){document.getElementById('print-modal').hidden=true}
+function printModalClose(){document.getElementById('print-modal').style.display='none'}
 function printModalGo(){
   _printColKeys=new Set(PRINT_COLS.filter(c=>document.getElementById('pcol-'+c.key)?.checked).map(c=>c.key));
   printModalClose();
@@ -1126,7 +1126,9 @@ function printModalGo(){
     <thead><tr>${thCells}</tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="footer">מערכת רישום הסעות ישיבת תפרח</div>
+  <div class="footer">
+    הודפס אוטומטית ע"י מערכת רישום הסעות ישיבת תפרח &nbsp;|&nbsp; כל הזכויות שמורות &copy; יצחק יעקובסון
+  </div>
   <script>window.onload=()=>{window.print()}<\/script>
   </body></html>`;
   const w=window.open('','_blank','width=960,height=750');
@@ -1480,7 +1482,7 @@ function toggleTheme(){
 </div>
 
 <!-- מודאל הגדרות הדפסה -->
-<div id="print-modal" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)printModalClose()">
+<div id="print-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center" onclick="if(event.target===this)printModalClose()">
   <div style="background:var(--surface);border-radius:14px;padding:28px 32px;min-width:280px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25);direction:rtl">
     <h3 style="margin:0 0 18px;font-size:17px;color:var(--navy)">🖨 הגדרות הדפסה</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">בחר עמודות להדפסה:</p>
