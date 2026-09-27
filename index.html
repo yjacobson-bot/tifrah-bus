@@ -275,7 +275,7 @@ function showAlert(type,title,msg){
   const icons={success:'✅',warning:'⚠️',error:'❌',info:'ℹ️'};
   el.innerHTML=`<span>${icons[type]||'ℹ️'}</span><span><strong>${esc(title)}</strong>${msg?' — '+esc(msg):''}</span><button onclick="clearAlert()" style="background:none;border:none;cursor:pointer;font-size:16px;color:inherit;padding:0 4px">✕</button>`;
   el.className='toast toast-'+type;el.hidden=false;
-  clearTimeout(_toastTimer);_toastTimer=setTimeout(clearAlert,10000);
+  clearTimeout(_toastTimer);
 }
 function clearAlert(){const el=qs('toast');if(el)el.hidden=true;clearTimeout(_toastTimer)}
 
