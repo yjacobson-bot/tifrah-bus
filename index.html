@@ -306,7 +306,7 @@ function credsOK(){return CONFIG.sysNum!=='XXXXX'&&CONFIG.password!=='YYYYY'}
 
 // תרגום ערכים מספריים לשמות
 function cityLabel(v){return CITY_MAP[String(v)]||'(לא ידוע)'}
-function nbhdLabel(v){return NBHD_MAP[String(v)]||'(לא ידוע)'}
+function nbhdLabel(v){return NBHD_MAP[String(v)]||''}
 function ramotLabel(v){return RAMOT_MAP[String(v)]||''}
 
 // תרגום שמות עמודות טכניות לעברית
@@ -853,12 +853,8 @@ async function adminBackupAndReset(){
     adminDoReset();return;
   }
   try{
-    const hdrs=_columns.map(c=>colLabel(c));
-    const rows=_records.map(r=>_columns.map(c=>cellVal(r,c)));
-    const ws=XLSX.utils.aoa_to_sheet([hdrs,...rows]);
-    ws['!cols']=_columns.map(()=>({wch:18}));
     const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'בחורים');
+    XLSX.utils.book_append_sheet(wb,buildExcelSheet(_records),'בחורים');
     const now=new Date();
     const stamp=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     XLSX.writeFile(wb,`תפרח_גיבוי_לפני_מחיקה_${stamp}.xlsx`);
@@ -998,18 +994,29 @@ function adminMsg(msg,color){
 }
 
 // ══════════════════════════════════════════════
-// ייצוא אקסל אמיתי
+// ייצוא אקסל
 // ══════════════════════════════════════════════
+const EXCEL_COLS=['ValName','Phone',CITY_KEY,NBHD_KEY,'P052'];
+const EXCEL_HDRS=['שם','טלפון','עיר','שכונה','בתוך רמות'];
+
+function buildExcelSheet(records){
+  const rows=records.map(r=>EXCEL_COLS.map(c=>{
+    const v=cellVal(r,c);
+    return v==='(לא ידוע)'?'':v;
+  }));
+  const ws=XLSX.utils.aoa_to_sheet([EXCEL_HDRS,...rows]);
+  ws['!cols']=[{wch:20},{wch:16},{wch:14},{wch:20},{wch:14}];
+  // כיוון RTL לגיליון
+  if(!ws['!views'])ws['!views']=[];
+  ws['!views'][0]={rightToLeft:true};
+  return ws;
+}
+
 function exportExcel(){
   if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
   try{
-    const hdrs=_columns.map(c=>colLabel(c));
-    const rows=_drillFiltered.map(r=>_columns.map(c=>cellVal(r,c)));
-    const ws=XLSX.utils.aoa_to_sheet([hdrs,...rows]);
-    // כיוון RTL
-    ws['!cols']=_columns.map(()=>({wch:18}));
     const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'בחורים');
+    XLSX.utils.book_append_sheet(wb,buildExcelSheet(_drillFiltered),'בחורים');
     const fname=`תפרח_רישום_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.xlsx`;
     XLSX.writeFile(wb,fname);
     showAlert('success','קובץ אקסל הורד',fname);
