@@ -335,7 +335,8 @@ async function checkVersion(){
   try{
     // ניסיון 1: GitHub API — SHA קומיט אמין
     const ghUrl=`https://api.github.com/repos/${GH_REPO}/commits/main`;
-    const r=await fetch(ghUrl,{cache:'no-store',headers:{Accept:'application/vnd.github.v3+json'}});
+    const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),5000);
+    const r=await fetch(ghUrl,{cache:'no-store',signal:ctrl.signal,headers:{Accept:'application/vnd.github.v3+json'}});
     if(r.ok){
       const j=await r.json();
       const sha=(j.sha||'').slice(0,10);
@@ -2486,7 +2487,7 @@ async function exportPDF(){
     _applyThemePref(t);
   }catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
-  await checkVersion(); // שמירת SHA ראשוני
+  checkVersion(); // שמירת SHA ראשוני — לא מחכים, רץ ברקע
   await loadData();startTimer();
   setInterval(checkVersion,30000); // כל 30 שניות
   // בדוק גם כשהטאב חוזר לפוקוס (אחרי שהיה ברקע)
