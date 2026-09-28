@@ -343,7 +343,7 @@ async function checkVersion(){
     // ניסיון 1: GitHub API — SHA קומיט אמין
     const ghUrl=`https://api.github.com/repos/${GH_REPO}/commits/main`;
     const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),5000);
-    const r=await fetch(ghUrl,{cache:'no-store',signal:ctrl.signal,headers:{Accept:'application/vnd.github.v3+json'}});
+    const r=await fetch(ghUrl,{cache:'no-store',signal:ctrl.signal,headers:{Accept:'application/vnd.github.v3+json','X-RateLimit-Resource':'core'}});
     if(r.ok){
       const j=await r.json();
       const sha=(j.sha||'').slice(0,10);
@@ -449,13 +449,13 @@ async function ensureToken(){
   let text;
   try{
     const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),8000);
+    const tid=setTimeout(()=>ctrl.abort(),12000);
     const res=await fetch(`${API}Login?username=${encodeURIComponent(CONFIG.sysNum)}&password=${encodeURIComponent(CONFIG.password)}`,{signal:ctrl.signal});
     clearTimeout(tid);
     text=await res.text();
   }catch(e){
     const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (8 שנ\')':('שגיאת רשת: '+e.message);
-    throw new Error(msg);
+    throw new Error(msg.replace('8 שנ\'','12 שנ\''));
   }
   let tok=null;
   try{const j=JSON.parse(text);if(j.token)tok=j.token;else if(j.responseStatus&&j.responseStatus!=='OK')throw new Error(j.message||text)}catch(e){if(e.message.includes('JSON')){}else throw e}
@@ -2502,7 +2502,7 @@ async function exportPDF(){
   if(_records.length){try{buildColumns(_records);renderDashboard();}catch{}}
   checkVersion(); // שמירת SHA ראשוני — לא מחכים, רץ ברקע
   await loadData();startTimer();
-  setInterval(checkVersion,30000); // כל 30 שניות
+  setInterval(checkVersion,120000); // כל 2 דקות (GitHub rate limit: 60/hour)
   // בדוק גם כשהטאב חוזר לפוקוס (אחרי שהיה ברקע)
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkVersion();});
   window.addEventListener('focus',checkVersion);
