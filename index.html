@@ -2155,8 +2155,8 @@ function renderSnapCard(s,periodId,opts){
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
       </div>
       <div class="snap-header-btns" style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
-        <button onclick="snapPrintMenu(${s.id},'summary',this)" style="height:28px;padding:0 9px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום ▾</button>
-        <button onclick="snapPrintMenu(${s.id},'city',this)" style="height:28px;padding:0 9px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים ▾</button>
+        <button onclick="snapDoPrint(${s.id},'summary')" style="height:28px;padding:0 9px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
+        <button onclick="snapDoPrint(${s.id},'city')" style="height:28px;padding:0 9px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
         <button onclick="snapExcelOne(${s.id})" style="height:28px;padding:0 9px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
       </div>
       <span class="arch-arrow" style="font-size:13px;color:var(--muted);flex-shrink:0">▼</span>
@@ -2171,8 +2171,8 @@ function renderSnapCard(s,periodId,opts){
       <div class="snap-actions" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <button onclick="snapToggleTable(${s.id},this)" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer">📋 הצג רשימה</button>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="snapPrintMenu(${s.id},'summary',this)" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום ▾</button>
-          <button onclick="snapPrintMenu(${s.id},'city',this)" style="height:30px;padding:0 10px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים ▾</button>
+          <button onclick="snapDoPrint(${s.id},'summary')" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
+          <button onclick="snapDoPrint(${s.id},'city')" style="height:30px;padding:0 10px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
           <button onclick="snapExcelOne(${s.id})" style="height:30px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
           <button onclick="if(confirm('למחוק את תמונת המצב?'))snapDelete(${s.id}${periodArg})" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer">🗑</button>
         </div>
@@ -2421,10 +2421,7 @@ function snapPrintMenu(snapId,type,btnEl){
     'font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--fg)';
   menu.innerHTML=
     `<button style="${btnStyle}" onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='none'"
-       onclick="snapDoPrint(${snapId},'${type}');this.closest('.snap-print-menu').remove()">🖨 הדפסה ישירה</button>`+
-    `<div style="height:1px;background:var(--border)"></div>`+
-    `<button style="${btnStyle}" onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='none'"
-       onclick="snapDoPDF(${snapId},'${type}');this.closest('.snap-print-menu').remove()">📄 שמור כ-PDF</button>`;
+       onclick="snapDoPrint(${snapId},'${type}');this.closest('.snap-print-menu').remove()">🖨 הדפסה ישירה</button>`;
   document.body.appendChild(menu);
   setTimeout(()=>document.addEventListener('click',function h(e){
     if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',h);}
