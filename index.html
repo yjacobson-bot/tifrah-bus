@@ -448,14 +448,11 @@ async function ensureToken(){
   setStatus('pulse','מתחבר…');
   let text;
   try{
-    const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),12000);
-    const res=await fetch(`${API}Login?username=${encodeURIComponent(CONFIG.sysNum)}&password=${encodeURIComponent(CONFIG.password)}`,{signal:ctrl.signal});
-    clearTimeout(tid);
+    const res=await fetch(`${API}Login?username=${encodeURIComponent(CONFIG.sysNum)}&password=${encodeURIComponent(CONFIG.password)}`);
     text=await res.text();
   }catch(e){
     const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (8 שנ\')':('שגיאת רשת: '+e.message);
-    throw new Error(msg.replace('8 שנ\'','12 שנ\''));
+    throw new Error(msg);
   }
   let tok=null;
   try{const j=JSON.parse(text);if(j.token)tok=j.token;else if(j.responseStatus&&j.responseStatus!=='OK')throw new Error(j.message||text)}catch(e){if(e.message.includes('JSON')){}else throw e}
