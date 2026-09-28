@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&display=swap">
 <style>
-:root{--navy:#5c1a2e;--navy-mid:#7a2340;--accent:#2563EB;--accent-dim:#DBEAFE;--sky:#F0F6FF;--white:#FFFFFF;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g600:#475569;--g900:#0F172A;--green:#166534;--green-bg:#DCFCE7;--red:#991B1B;--red-bg:#FEE2E2;--amber:#92400E;--amber-bg:#FEF3C7;--bg:var(--sky);--surface:var(--white);--text:var(--g900);--muted:var(--g600);--border:var(--g200)}
+:root{--brand:#5c1a2e;--brand-mid:#7a2340;--navy:#1A3555;--navy-mid:#22477A;--accent:#2563EB;--accent-dim:#DBEAFE;--sky:#F0F6FF;--white:#FFFFFF;--g50:#F8FAFC;--g100:#F1F5F9;--g200:#E2E8F0;--g600:#475569;--g900:#111111;--green:#166534;--green-bg:#DCFCE7;--red:#991B1B;--red-bg:#FEE2E2;--amber:#92400E;--amber-bg:#FEF3C7;--bg:var(--sky);--surface:var(--white);--text:var(--g900);--muted:var(--g600);--border:var(--g200)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1829;--surface:#112240;--text:#CBD5E0;--muted:#64748B;--border:#1E3A5C;--sky:#0B1829;--g50:#0D1B2E;--g100:#112240;--g200:#1E3A5C;--white:#112240;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0B1829;--surface:#112240;--text:#CBD5E0;--muted:#64748B;--border:#1E3A5C;--sky:#0B1829;--g50:#0D1B2E;--g100:#112240;--g200:#1E3A5C;--white:#112240;color-scheme:dark}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;font-family:'Assistant',system-ui,sans-serif;background:var(--bg);color:var(--text);direction:rtl;font-size:15px;line-height:1.5}
-#top-bar{background:linear-gradient(135deg,var(--navy),var(--navy-mid));color:#f5e6c8;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+#top-bar{background:linear-gradient(135deg,var(--brand),var(--brand-mid));color:#f5e6c8;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.3)}
 .bar-inner{max-width:1400px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center;gap:12px}
 .brand{font-size:17px;font-weight:800;flex:0 0 auto;display:flex;align-items:center;gap:8px}
 .brand small{font-size:12px;font-weight:400;opacity:.65;margin-right:6px}
@@ -43,7 +43,7 @@ code{background:rgba(0,0,0,.08);padding:1px 5px;border-radius:4px;font-size:12px
 #cfg-warn strong{display:block;margin-bottom:4px}
 .section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap}
-.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--brand);margin:0}
 .section-meta{font-size:13px;color:var(--muted)}
 #dash-meta{font-size:15px;font-weight:600;letter-spacing:.01em}
 #dash-meta .meta-num{color:var(--accent);font-weight:700}
@@ -153,7 +153,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   .city-count{font-size:26px}
   .city-name{font-size:12px}
   /* כפתור חזרה בתחתית (sticky) */
-  .btn-back{position:fixed;bottom:16px;right:16px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.25);border-radius:24px;padding:10px 20px;font-size:15px;background:var(--navy);color:#fff;border-color:transparent}
+  .btn-back{position:fixed;bottom:16px;right:16px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.25);border-radius:24px;padding:10px 20px;font-size:15px;background:var(--brand);color:#fff;border-color:transparent}
   /* כותרת drill */
   #drill-header{flex-direction:row-reverse;justify-content:flex-end}
   .drill-title{font-size:17px}
@@ -2201,7 +2201,7 @@ function toggleTheme(){
 <!-- מודאל הגדרות הדפסה -->
 <div id="print-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center" onclick="if(event.target===this)printModalClose()">
   <div style="background:var(--surface);border-radius:14px;padding:28px 32px;min-width:280px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.25);direction:rtl">
-    <h3 style="margin:0 0 18px;font-size:17px;color:var(--navy)">🖨 הגדרות הדפסה</h3>
+    <h3 style="margin:0 0 18px;font-size:17px;color:var(--brand)">🖨 הגדרות הדפסה</h3>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">בחר עמודות להדפסה:</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:22px">
       <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" id="pcol-last"  style="width:16px;height:16px;accent-color:var(--accent)"> משפחה</label>
