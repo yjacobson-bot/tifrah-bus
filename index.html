@@ -2501,7 +2501,9 @@ async function _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd,enterId){
   const hh=String(now.getHours()).padStart(2,'0');
   const mi=String(now.getMinutes()).padStart(2,'0');
   const ss=String(now.getSeconds()).padStart(2,'0');
-  let newLine=`Status#OK%Phone#${phone}%IdType#list%EnterId#${enterId}%ValName#${_addRecordValName}%Date#${dd}/${mm}/${yyyy}%Time#${hh}:${mi}:${ss}%${CITY_KEY}#${city}`;
+  // כולל Folder/DID/IncomingDID כדי שמערכת ימות תזהה את הרשומה ותחסום רישום כפול בטלפון
+  const did=CONFIG.sysNum;const folder=CONFIG.folder;
+  let newLine=`Status#OK%Folder#${folder}%DID#${did}%IncomingDID#${did}%Phone#${phone}%IdType#list%EnterId#${enterId}%ValName#${_addRecordValName}%Date#${dd}/${mm}/${yyyy}%Time#${hh}:${mi}:${ss}%Data#%${CITY_KEY}#${city}`;
   if(city==='1'&&nbhd)newLine+=`%${NBHD_KEY}#${nbhd}`;
   const newText=[...lines,newLine].join('\n')+'\n';
   const form=new FormData();
