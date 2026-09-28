@@ -2344,6 +2344,7 @@ function gsSearch(){
 // הוסף רשום חדש
 // ══════════════════════════════════════════════
 let _addRecordValName=''; // ValName של הנרשם שאומת
+let _addRecordEnterId=''; // מספר ת.ז. שאומת
 
 function openAddRecord(){
   const o=qs('add-record-overlay');
@@ -2407,6 +2408,7 @@ async function verifyAddID(){
       }
     }catch(e){}
     _addRecordValName=found;
+    _addRecordEnterId=idNum;
     const parsed=parseValName(found);
     qs('add-id-name').textContent=`${parsed.first} ${parsed.last}`;
     qs('add-id-shiur').textContent=parsed.shiur?`שיעור: ${parsed.shiur}`:'';
@@ -2478,7 +2480,7 @@ async function saveNewRecord(){
       errEl.textContent='מספר טלפון זה כבר רשום במערכת';errEl.hidden=false;
       btn.disabled=false;btn.textContent='שמור רישום';return;
     }
-    await _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd);
+    await _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd,_addRecordEnterId);
   }catch(e){
     errEl.textContent=e.message||'שגיאה';errEl.hidden=false;
     btn.disabled=false;btn.textContent='שמור רישום';
@@ -2486,11 +2488,17 @@ async function saveNewRecord(){
 }
 
 
-async function _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd){
-  // בנה שורת רשומה חדשה
-  let newLine=`Status#OK%Phone#${phone}%${CITY_KEY}#${city}`;
+async function _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd,enterId){
+  // בנה שורת רשומה חדשה — פורמט זהה לרישום טלפוני
+  const now=new Date();
+  const dd=String(now.getDate()).padStart(2,'0');
+  const mm=String(now.getMonth()+1).padStart(2,'0');
+  const yyyy=now.getFullYear();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mi=String(now.getMinutes()).padStart(2,'0');
+  const ss=String(now.getSeconds()).padStart(2,'0');
+  let newLine=`Status#OK%Phone#${phone}%IdType#list%EnterId#${enterId}%ValName#${_addRecordValName}%Date#${dd}/${mm}/${yyyy}%Time#${hh}:${mi}:${ss}%${CITY_KEY}#${city}`;
   if(city==='1'&&nbhd)newLine+=`%${NBHD_KEY}#${nbhd}`;
-  newLine+=`%ValName#${_addRecordValName}`;
   const newText=[...lines,newLine].join('\n')+'\n';
   const form=new FormData();
   form.append('file',new Blob([newText],{type:'text/plain'}),approvalPath.split('/').pop());
