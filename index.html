@@ -1508,8 +1508,9 @@ function printByCity(records, title, snapDate){
   th{background:#e5e7eb;font-size:12px;padding:5px 10px;text-align:right;font-weight:700;white-space:nowrap}
   td{font-size:12px;padding:4px 10px;border-bottom:1px solid #eee;white-space:nowrap}
   tr:nth-child(even) td{background:#f9f9f9}
-  .print-footer{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;font-size:10px;color:#555;text-align:center}
-  @media print{body{margin:8px}.city-block{page-break-before:always}.city-block:first-child{page-break-before:auto}}
+  .print-footer{position:fixed;bottom:0;left:0;right:0;border-top:1px solid #aaa;padding:5px 10px;font-size:10px;color:#555;text-align:center;background:#fff}
+  body{padding-bottom:30px}
+  @media print{body{margin:8px;padding-bottom:30px}.city-block{page-break-before:always}.city-block:first-child{page-break-before:auto}}
 </style></head><body>
 <div class="page-header"><img class="logo" src="${logoSrc}" alt=""><br><h1>${title||'הדפסה לפי ערים'}</h1>
 <div class="sub">${snapDateStr?`תאריך רישום: ${snapDateStr} &nbsp;|&nbsp; `:''}הודפס: ${printDateStr} &nbsp;|&nbsp; סה"כ: ${records.length} נרשמו</div></div>
