@@ -454,9 +454,7 @@ async function ensureToken(){
     clearTimeout(tid);
     text=await res.text();
   }catch(e){
-    const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (8 שנ\')':('שגיאת רשת/CORS: '+e.message);
-    
-    qs('city-grid').innerHTML=`<div class="empty"><div class="ico">⏱️</div><p style="color:#DC2626">${msg}</p><p style="font-size:12px">ודא שהקובץ נפתח כ-file:// ולא מ-localhost</p></div>`;
+    const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (8 שנ\')':('שגיאת רשת: '+e.message);
     throw new Error(msg);
   }
   let tok=null;
