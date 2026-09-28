@@ -332,6 +332,20 @@ let _currentSha=null;
 
 async function checkVersion(){
   try{
+    // ניסיון 1: GitHub API — SHA קומיט אמין
+    const ghUrl=`https://api.github.com/repos/${GH_REPO}/commits/main`;
+    const r=await fetch(ghUrl,{cache:'no-store',headers:{Accept:'application/vnd.github.v3+json'}});
+    if(r.ok){
+      const j=await r.json();
+      const sha=(j.sha||'').slice(0,10);
+      if(!sha)return;
+      if(_currentSha===null){_currentSha=sha;return;}
+      if(sha!==_currentSha){_currentSha=sha;showUpdateBanner();}
+      return;
+    }
+  }catch{}
+  try{
+    // ניסיון 2: ETag / Last-Modified של הקובץ עצמו
     const url=location.origin+location.pathname+'?_v='+Date.now();
     const r=await fetch(url,{method:'HEAD',cache:'no-store'});
     if(!r.ok)return;
