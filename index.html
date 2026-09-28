@@ -1452,6 +1452,74 @@ const PRINT_COLS=[
 let _printColKeys=new Set(['last','first','shiur','phone','city']);
 
 // ===== הדפסת סיכום היררכי =====
+function printByCity(records, title, snapDate){
+  if(!records||!records.length){showAlert('warning','אין נתונים','');return;}
+  // קבץ לפי עיר ובתוכה לפי שכונה (אם יש)
+  const cityMap={};
+  records.forEach(r=>{
+    const city=cityLabel(r[CITY_KEY])||'(לא ידוע)';
+    const nbhd=nbhdLabel(r[NBHD_KEY])||'';
+    const name=parseValName(r.ValName||'');
+    const row={last:name.last,first:name.first,shiur:name.shiur,phone:r.Phone||r.Folder||''};
+    if(!cityMap[city])cityMap[city]={nbhds:{},direct:[]};
+    if(nbhd){
+      if(!cityMap[city].nbhds[nbhd])cityMap[city].nbhds[nbhd]=[];
+      cityMap[city].nbhds[nbhd].push(row);
+    } else {
+      cityMap[city].direct.push(row);
+    }
+  });
+  const now=new Date();
+  const printDateStr=now.toLocaleDateString('he',{day:'numeric',month:'long',year:'numeric'})+' '+now.toLocaleTimeString('he',{hour:'2-digit',minute:'2-digit'});
+  const snapDateStr=snapDate?new Date(snapDate).toLocaleDateString('he',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):null;
+  const mkTable=(rows)=>`<table><thead><tr><th>משפחה</th><th>שם פרטי</th><th>שיעור</th><th>טלפון</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.last)}</td><td>${esc(r.first)}</td><td>${esc(r.shiur)}</td><td dir="ltr">${esc(r.phone)}</td></tr>`).join('')}</tbody></table>`;
+  let body='';
+  const sortedCities=Object.entries(cityMap).sort((a,b)=>a[0].localeCompare(b[0],'he'));
+  sortedCities.forEach(([city,cd])=>{
+    const hasNbhds=Object.keys(cd.nbhds).length>0;
+    body+=`<div class="city-block"><h2>${city}</h2>`;
+    if(hasNbhds){
+      Object.entries(cd.nbhds).sort((a,b)=>a[0].localeCompare(b[0],'he')).forEach(([nbhd,rows])=>{
+        body+=`<h3>${nbhd} <span class="cnt">(${rows.length})</span></h3>${mkTable(rows)}`;
+      });
+      if(cd.direct.length) body+=`<h3>ללא שכונה <span class="cnt">(${cd.direct.length})</span></h3>${mkTable(cd.direct)}`;
+    } else {
+      body+=`<p class="city-cnt">${cd.direct.length} נרשמו</p>${mkTable(cd.direct)}`;
+    }
+    body+='</div>';
+  });
+  const logoSrc=document.querySelector('#top-bar img')?.src||'';
+  const win=window.open('','_blank','width=850,height=1000');
+  if(!win){showAlert('error','חסימת חלון','אפשר חלונות קופצים להדפסה');return;}
+  win.document.write(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+<title>הדפסה לפי ערים – ${title||'רישום'}</title>
+<style>
+  body{font-family:'Arial',sans-serif;font-size:13px;margin:25px;color:#000;direction:rtl}
+  .logo{display:block;width:55px;height:auto;margin:0 auto 8px}
+  h1{font-size:18px;font-weight:800;text-align:center;margin:0 0 2px}
+  .sub{font-size:11px;color:#444;text-align:center;margin-bottom:18px}
+  .city-block{margin-bottom:22px;page-break-inside:avoid}
+  h2{font-size:15px;font-weight:800;background:#1A3555;color:#fff;padding:5px 10px;margin:0 0 4px;border-radius:4px}
+  h3{font-size:13px;font-weight:700;background:#dbeafe;color:#1A3555;padding:4px 10px;margin:6px 0 2px;border-radius:3px}
+  .city-cnt{font-size:12px;color:#555;margin:0 0 4px}
+  .cnt{font-weight:400;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-bottom:4px}
+  th{background:#e5e7eb;font-size:12px;padding:4px 8px;text-align:right;font-weight:700}
+  td{font-size:12px;padding:3px 8px;border-bottom:1px solid #eee}
+  tr:nth-child(even) td{background:#f9f9f9}
+  .print-footer{margin-top:24px;border-top:1px solid #aaa;padding-top:8px;font-size:10px;color:#555;text-align:center}
+  @media print{body{margin:10px}.city-block{page-break-inside:avoid}}
+</style></head><body>
+<img class="logo" src="${logoSrc}" alt="">
+<h1>${title||'הדפסה לפי ערים'}</h1>
+<div class="sub">${snapDateStr?`תאריך רישום: ${snapDateStr} &nbsp;|&nbsp; `:''}הודפס: ${printDateStr} &nbsp;|&nbsp; סה"כ: ${records.length} נרשמו</div>
+${body}
+<div class="print-footer">הודפס אוטומטית ע"י מערכת רישום הסעות ישיבת תפרח &nbsp;|&nbsp; כל הזכויות שמורות &copy; יצחק יעקבסון &nbsp;|&nbsp; לפרטים: 0548565906</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
 function printSummary(records, title, snapDate){
   if(!records||!records.length){showAlert('warning','אין נתונים','');return;}
   // בנה היררכיה: עיר → שכונה → רמה
@@ -1989,8 +2057,9 @@ function renderSnapCard(s,periodId,opts){
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
-        <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
-        <button onclick="snapExcelOne(${s.id})" style="height:28px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
+        <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 9px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
+        <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printByCity(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 9px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
+        <button onclick="snapExcelOne(${s.id})" style="height:28px;padding:0 9px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
       </div>
       <span class="arch-arrow" style="font-size:13px;color:var(--muted);flex-shrink:0">▼</span>
     </div>
@@ -2005,6 +2074,7 @@ function renderSnapCard(s,periodId,opts){
         <button onclick="snapToggleTable(${s.id},this)" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer">📋 הצג רשימה</button>
         <div style="display:flex;gap:6px">
           <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
+          <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printByCity(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:30px;padding:0 10px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
           <button onclick="snapExcelOne(${s.id})" style="height:30px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
           <button onclick="if(confirm('למחוק את תמונת המצב?'))snapDelete(${s.id}${periodArg})" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer">🗑</button>
         </div>
