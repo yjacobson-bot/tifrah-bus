@@ -1533,36 +1533,82 @@ function updateExportBtn(){
 }
 
 // ══════════════════════════════════════════════
-// ארכיון תמונות מצב — נשמר ב-Yemot (archive.json)
+// ארכיון תמונות מצב — נשמר ב-Yemot בתיקיית ארכיון
+// מבנה: ארכיון/index.json + ארכיון/period_<id>.json לכל תקופה
 // ══════════════════════════════════════════════
-const ARCHIVE_PATH=()=>`${CONFIG.folder}/archive.json`;
+const ARCHIVE_FOLDER=()=>`${CONFIG.folder}/ארכיון`;
 
-let _snapCache=null; // cache בזיכרון למניעת קריאות מיותרות
+let _archiveIndex=null;   // {currentPeriodId, periods:[{id,name,startDate,closedDate}]}
+let _periodCache={};      // id → snaps[]
+let _periodsData=[];      // [{period,snaps}] מסודר מהחדש לישן
+let _allSnapsFlat=[];     // flat array לחיפוש לפי id
 
-async function snapFetch(){
-  if(_snapCache)return _snapCache;
+async function archFetchIndex(){
+  if(_archiveIndex)return _archiveIndex;
   try{
     const tok=await ensureToken();
-    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${ARCHIVE_PATH()}`);
-    if(!r.ok){_snapCache=[];return[];}
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${ARCHIVE_FOLDER()}/index.json`);
+    if(!r.ok){_archiveIndex={currentPeriodId:null,periods:[]};return _archiveIndex;}
     const txt=await r.text();
-    if(!txt||!txt.trim()||txt.trim().startsWith('<')){_snapCache=[];return[];}
-    _snapCache=JSON.parse(txt);
-    return _snapCache;
-  }catch{_snapCache=[];return[];}
+    if(!txt||!txt.trim()||txt.trim().startsWith('<')){_archiveIndex={currentPeriodId:null,periods:[]};return _archiveIndex;}
+    _archiveIndex=JSON.parse(txt);
+    return _archiveIndex;
+  }catch{_archiveIndex={currentPeriodId:null,periods:[]};return _archiveIndex;}
 }
 
-async function snapPush(snaps){
-  _snapCache=snaps;
+async function archPushIndex(){
   try{
     const tok=await ensureToken();
     const form=new FormData();
-    form.append('file',new Blob([JSON.stringify(snaps)],{type:'application/json'}),'archive.json');
-    await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${ARCHIVE_PATH()}`,{method:'POST',body:form});
-  }catch(e){console.error('snapPush error',e);}
+    form.append('file',new Blob([JSON.stringify(_archiveIndex)],{type:'application/json'}),'index.json');
+    await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${ARCHIVE_FOLDER()}/index.json`,{method:'POST',body:form});
+  }catch(e){console.error('archPushIndex error',e);}
 }
 
-async function snapSave(name, actualBuses){
+async function archFetchPeriod(id){
+  if(_periodCache[id])return _periodCache[id];
+  try{
+    const tok=await ensureToken();
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${ARCHIVE_FOLDER()}/period_${id}.json`);
+    if(!r.ok){_periodCache[id]=[];return[];}
+    const txt=await r.text();
+    if(!txt||!txt.trim()||txt.trim().startsWith('<')){_periodCache[id]=[];return[];}
+    _periodCache[id]=JSON.parse(txt);
+    return _periodCache[id];
+  }catch{_periodCache[id]=[];return[];}
+}
+
+async function archPushPeriod(id,snaps){
+  _periodCache[id]=snaps;
+  try{
+    const tok=await ensureToken();
+    const form=new FormData();
+    form.append('file',new Blob([JSON.stringify(snaps)],{type:'application/json'}),`period_${id}.json`);
+    await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${ARCHIVE_FOLDER()}/period_${id}.json`,{method:'POST',body:form});
+  }catch(e){console.error('archPushPeriod error',e);}
+}
+
+async function archCreatePeriod(name){
+  const idx=await archFetchIndex();
+  const id=String(Date.now());
+  idx.periods.push({id,name,startDate:new Date().toISOString()});
+  idx.currentPeriodId=id;
+  _periodCache[id]=[];
+  await archPushIndex();
+  await archPushPeriod(id,[]);
+  return id;
+}
+
+async function archClosePeriod(){
+  const idx=await archFetchIndex();
+  if(!idx.currentPeriodId)return;
+  const p=idx.periods.find(p=>p.id===idx.currentPeriodId);
+  if(p)p.closedDate=new Date().toISOString();
+  idx.currentPeriodId=null;
+  await archPushIndex();
+}
+
+async function snapSave(name,actualBuses){
   if(!_records||!_records.length){adminMsg('אין נתונים לשמירה','#92400E');return false}
   adminMsg('⏳ שומר…','#92400E');
   const cities={};
@@ -1579,42 +1625,69 @@ async function snapSave(name, actualBuses){
     records:_records
   };
   try{
-    const snaps=await snapFetch();
-    snaps.unshift(snap);if(snaps.length>30)snaps.length=30;
-    await snapPush(snaps);
+    const idx=await archFetchIndex();
+    let periodId=idx.currentPeriodId;
+    if(!periodId){
+      periodId=await archCreatePeriod(name||`רישום ${new Date().toLocaleDateString('he')}`);
+    }
+    const snaps=await archFetchPeriod(periodId);
+    snaps.unshift(snap);if(snaps.length>50)snaps.length=50;
+    await archPushPeriod(periodId,snaps);
+    // עדכן cache מקומי
+    const pd=_periodsData.find(p=>p.period.id===periodId);
+    if(pd){pd.snaps=snaps;}
+    _allSnapsFlat=[..._periodsData.flatMap(p=>p.snaps)];
     adminMsg('✅ נשמר','#166534');
     renderSnapList();renderArchiveView();return true;
   }catch(e){adminMsg('שגיאה בשמירה: '+e.message,'#991B1B');return false}
 }
 
-async function snapDelete(id){
+async function snapDelete(snapId,periodId){
   adminMsg('⏳ מוחק…','#92400E');
   try{
-    const snaps=(await snapFetch()).filter(s=>s.id!==id);
-    await snapPush(snaps);
+    if(!periodId){
+      // חיפוש בכל התקופות
+      const idx=await archFetchIndex();
+      for(const p of idx.periods){
+        const snaps=await archFetchPeriod(p.id);
+        if(snaps.find(s=>s.id===snapId)){periodId=p.id;break;}
+      }
+    }
+    if(!periodId){adminMsg('לא נמצא','#991B1B');return;}
+    const snaps=(await archFetchPeriod(periodId)).filter(s=>s.id!==snapId);
+    await archPushPeriod(periodId,snaps);
+    const pd=_periodsData.find(p=>p.period.id===periodId);
+    if(pd)pd.snaps=snaps;
+    _allSnapsFlat=[..._periodsData.flatMap(p=>p.snaps)];
     adminMsg('✅ נמחק','#166534');
     renderSnapList();renderArchiveView();
   }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B')}
 }
 
-// snapList — סינכרוני מהcache, נטען ב-renderSnapList
-function snapList(){return _snapCache||[]}
+// snapList — flat list לתאימות אחורה
+function snapList(){return _allSnapsFlat;}
 
 async function snapLoadAndRender(){
-  _snapCache=null; // נקה cache כדי לטעון מחדש
-  await snapFetch();
+  _archiveIndex=null;_periodCache={};_periodsData=[];_allSnapsFlat=[];
+  const idx=await archFetchIndex();
+  const periodsRev=[...idx.periods].reverse();
+  for(const p of periodsRev){
+    const snaps=await archFetchPeriod(p.id);
+    _periodsData.push({period:p,snaps});
+  }
+  _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps);
   renderSnapList();renderArchiveView();
 }
 
 function snapExport(){
-  const snaps=snapList();
-  if(!snaps.length){adminMsg('אין תמונות מצב לייצוא','#92400E');return}
-  const blob=new Blob([JSON.stringify(snaps,null,2)],{type:'application/json'});
+  const data={index:_archiveIndex,periods:_periodsData.map(pd=>({period:pd.period,snaps:pd.snaps}))};
+  if(!_allSnapsFlat.length){adminMsg('אין תמונות מצב לייצוא','#92400E');return}
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
   a.download=`תפרח_ארכיון_${new Date().toLocaleDateString('he').replace(/\//g,'-')}.json`;
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-  adminMsg(`✅ יוצאו ${snaps.length} תמונות מצב`,'#166534');
+  adminMsg(`✅ יוצאו ${_periodsData.length} תקופות (${_allSnapsFlat.length} תמונות מצב)`,'#166534');
 }
 
 async function snapImport(input){
@@ -1622,16 +1695,30 @@ async function snapImport(input){
   const reader=new FileReader();
   reader.onload=async e=>{
     try{
-      const imported=JSON.parse(e.target.result);
-      if(!Array.isArray(imported))throw new Error('פורמט לא תקין');
+      const parsed=JSON.parse(e.target.result);
       adminMsg('⏳ מייבא…','#92400E');
-      const existing=await snapFetch();
-      const existIds=new Set(existing.map(s=>s.id));
-      const newOnes=imported.filter(s=>!existIds.has(s.id));
-      const merged=[...existing,...newOnes].sort((a,b)=>b.id-a.id).slice(0,30);
-      await snapPush(merged);
-      adminMsg(`✅ יובאו ${newOnes.length} תמונות מצב חדשות`,'#166534');
-      renderSnapList();
+      // תמיכה בפורמט ישן (מערך) ובפורמט חדש ({index,periods})
+      let importedPeriods=[];
+      if(Array.isArray(parsed)){
+        // פורמט ישן — מערך תמונות מצב → תקופה אחת מיובאת
+        const pid='imported_'+Date.now();
+        importedPeriods=[{period:{id:pid,name:'ייבוא ישן',startDate:new Date().toISOString()},snaps:parsed}];
+      } else if(parsed.periods){
+        importedPeriods=parsed.periods;
+      } else throw new Error('פורמט לא תקין');
+      const idx=await archFetchIndex();
+      const existPeriodIds=new Set(idx.periods.map(p=>p.id));
+      let newCount=0;
+      for(const {period,snaps} of importedPeriods){
+        if(!existPeriodIds.has(period.id)){
+          idx.periods.push(period);
+          await archPushPeriod(period.id,snaps);
+          newCount++;
+        }
+      }
+      await archPushIndex();
+      adminMsg(`✅ יובאו ${newCount} תקופות חדשות`,'#166534');
+      await snapLoadAndRender();
     }catch(err){adminMsg('שגיאה בייבוא: '+err.message,'#991B1B')}
   };
   reader.readAsText(file);input.value='';
@@ -1675,28 +1762,40 @@ function snapExcelOne(id){
 
 function renderSnapList(){
   const el=document.getElementById('snap-list');if(!el)return;
-  const snaps=snapList();
-  if(!snaps.length){
+  const activePeriods=_periodsData.filter(pd=>pd.snaps.length);
+  if(!activePeriods.length){
     el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:10px 0">אין רישומים שמורים</div>';
     return;
   }
-  el.innerHTML=snaps.map(s=>{
-    const d=new Date(s.date);
-    const dateStr=d.toLocaleDateString('he')+' '+d.toLocaleTimeString('he',{hour:'2-digit',minute:'2-digit'});
-    const cityStr=s.cities.slice(0,3).map(([n,c])=>`${n} (${c})`).join(' · ');
-    const busLine=s.totalActualBuses?` · 🚌 ${s.totalActualBuses} אוטובוסים בפועל`:'';
-    return `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
-      <div style="display:flex;align-items:flex-start;gap:8px">
+  el.innerHTML=activePeriods.map(pd=>{
+    const {period,snaps}=pd;
+    const isOpen=!period.closedDate;
+    const statusBadge=isOpen
+      ?'<span style="font-size:10px;background:#D1FAE5;color:#065F46;padding:1px 6px;border-radius:4px;font-weight:700">פתוח</span>'
+      :'<span style="font-size:10px;background:var(--g100);color:var(--muted);padding:1px 6px;border-radius:4px">סגור</span>';
+    const snapsHtml=snaps.map(s=>{
+      const d=new Date(s.date);
+      const dateStr=d.toLocaleDateString('he')+' '+d.toLocaleTimeString('he',{hour:'2-digit',minute:'2-digit'});
+      const cityStr=s.cities.slice(0,3).map(([n,c])=>`${n} (${c})`).join(' · ');
+      const busLine=s.totalActualBuses?` · 🚌 ${s.totalActualBuses}`:'';
+      return `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:14px">${esc(s.name)}</div>
-          <div style="font-size:12px;color:var(--muted);margin:2px 0">${dateStr} · <strong>${s.total.toLocaleString('he')}</strong> נרשמו${busLine}</div>
+          <div style="font-weight:600;font-size:13px">${esc(s.name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin:1px 0">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${busLine}</div>
           <div style="font-size:11px;color:var(--muted)">${esc(cityStr)}</div>
         </div>
-        <div style="display:flex;gap:5px;flex-shrink:0">
-          <button onclick="snapExcelOne(${s.id})" title="ייצא Excel" style="height:28px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--g100);font-size:12px;cursor:pointer">📊 Excel</button>
-          <button onclick="snapDelete(${s.id})" title="מחק" style="height:28px;padding:0 8px;border:1px solid #FCA5A5;border-radius:6px;background:#FEE2E2;color:#991B1B;font-size:11px;cursor:pointer">🗑</button>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="snapExcelOne(${s.id})" style="height:26px;padding:0 7px;border:1px solid var(--border);border-radius:5px;background:var(--g100);font-size:11px;cursor:pointer">📊</button>
+          <button onclick="snapDelete(${s.id},'${period.id}')" style="height:26px;padding:0 7px;border:1px solid #FCA5A5;border-radius:5px;background:#FEE2E2;color:#991B1B;font-size:11px;cursor:pointer">🗑</button>
         </div>
+      </div>`;
+    }).join('');
+    return `<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--g50);border-bottom:1px solid var(--border)">
+        <span style="font-weight:700;font-size:13px;flex:1">${esc(period.name)}</span>
+        ${statusBadge}
       </div>
+      <div style="padding:0 12px">${snapsHtml}</div>
     </div>`;
   }).join('');
 }
@@ -1742,64 +1841,94 @@ async function adminCloseRegistration(){
   });
 
   adminMsg('⏳ שומר…','#92400E');
-  const saved=snapSave(name,actualBuses);
+  const saved=await snapSave(name,actualBuses);
   if(!saved)return;
+  // סגור את התקופה הנוכחית — הרישום הבא יפתח תקופה חדשה
+  await archClosePeriod();
   document.getElementById('bus-form-section').hidden=true;
   if(nameEl)nameEl.value='';
   adminMsg('⏳ מוחק קובץ רשומות…','#92400E');
   await adminDoReset();
 }
 
+// רינדור כרטיס תמונת מצב אחת (משותף לארכיון ולפאנל מנהל)
+function renderSnapCard(s,periodId,opts){
+  opts=opts||{};
+  const d=new Date(s.date);
+  const dateStr=d.toLocaleDateString('he',{day:'numeric',month:'long',year:'numeric'});
+  const actualMap=Object.fromEntries((s.actualBuses||[]).map(x=>[x.city,x.buses]));
+  const cityRows=s.cities.map(([city,reg])=>{
+    const buses=actualMap[city]??0;
+    const busStr=s.actualBuses&&s.actualBuses.length?(buses?`🚌 ${buses}`:'0 🚌'):'';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-weight:600">${esc(city)}</span>
+      <span style="font-size:13px;color:var(--muted)">${reg} נרשמו${busStr?' · '+busStr:''}</span>
+    </div>`;
+  }).join('');
+  const busTag=s.totalActualBuses
+    ?`<span style="color:#059669;font-weight:700">🚌 ${s.totalActualBuses} אוטובוסים יצאו</span>`
+    :'<span style="color:var(--muted);font-size:13px">ללא נתוני אוטובוסים</span>';
+  const periodArg=periodId?`,'${periodId}'`:'';
+  return `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
+    <div onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.querySelector('.arch-arrow').textContent=this.nextElementSibling.hidden?'▼':'▲'"
+      style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);gap:12px;user-select:none">
+      <div>
+        <div style="font-size:14px;font-weight:700">${esc(s.name)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
+      </div>
+      <span class="arch-arrow" style="font-size:13px;color:var(--muted);flex-shrink:0">▼</span>
+    </div>
+    <div hidden style="padding:12px 14px;border-top:1px solid var(--border)">
+      <div style="display:flex;gap:20px;margin-bottom:10px;flex-wrap:wrap">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:800;color:var(--accent)">${s.total.toLocaleString('he')}</div><div style="font-size:12px;color:var(--muted)">נרשמו</div></div>
+        ${s.totalActualBuses?`<div style="text-align:center"><div style="font-size:24px;font-weight:800;color:#059669">${s.totalActualBuses}</div><div style="font-size:12px;color:var(--muted)">אוטובוסים</div></div>`:''}
+      </div>
+      <div style="margin-bottom:8px">${busTag}</div>
+      ${cityRows?`<div style="margin-top:6px">${cityRows}</div>`:''}
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <button onclick="snapToggleTable(${s.id},this)" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer">📋 הצג רשימה</button>
+        <div style="display:flex;gap:6px">
+          <button onclick="snapExcelOne(${s.id})" style="height:30px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
+          <button onclick="if(confirm('למחוק את תמונת המצב?'))snapDelete(${s.id}${periodArg})" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer">🗑</button>
+        </div>
+      </div>
+      <div id="snap-table-${s.id}" hidden style="margin-top:10px;overflow-x:auto"></div>
+    </div>
+  </div>`;
+}
+
 // תצוגת ארכיון ראשית (בדף, לא בפאנל מנהל)
 function renderArchiveView(){
   const el=document.getElementById('archive-list');if(!el)return;
-  const snaps=snapList();
   const btn=document.getElementById('archive-tab-btn');
-  if(btn)btn.textContent=`📂 ארכיון${snaps.length?' ('+snaps.length+')':''}`;
-  if(!snaps.length){
+  const numPeriods=_periodsData.filter(pd=>pd.snaps.length).length;
+  if(btn)btn.textContent=`📂 ארכיון${numPeriods?' ('+numPeriods+')':''}`;
+  if(!numPeriods){
     el.innerHTML='<div class="empty"><div class="ico">📂</div><p>אין רישומים שמורים עדיין</p><p style="font-size:13px">לאחר סגירת רישום, הוא יופיע כאן</p></div>';
     return;
   }
-  el.innerHTML=snaps.map(s=>{
-    const d=new Date(s.date);
-    const dateStr=d.toLocaleDateString('he',{day:'numeric',month:'long',year:'numeric'});
-    // כל הערים מתוך s.cities, מועשר בנתוני אוטובוסים בפועל
-    const actualMap=Object.fromEntries((s.actualBuses||[]).map(x=>[x.city,x.buses]));
-    const cityRows=s.cities.map(([city,reg])=>{
-      const buses=actualMap[city]??0;
-      const busStr=s.actualBuses&&s.actualBuses.length?(buses?`🚌 ${buses}`:'0 🚌'):'';
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
-        <span style="font-weight:600">${esc(city)}</span>
-        <span style="font-size:13px;color:var(--muted)">${reg} נרשמו${busStr?' · '+busStr:''}</span>
-      </div>`;
-    }).join('');
-    const busTag=s.totalActualBuses
-      ?`<span style="color:#059669;font-weight:700">🚌 ${s.totalActualBuses} אוטובוסים יצאו</span>`
-      :'<span style="color:var(--muted);font-size:13px">ללא נתוני אוטובוסים</span>';
-    return `<div style="border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
-      <div onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.querySelector('.arch-arrow').textContent=this.nextElementSibling.hidden?'▼':'▲'"
-        style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;background:var(--surface);gap:12px;user-select:none">
+  el.innerHTML=_periodsData.filter(pd=>pd.snaps.length).map(pd=>{
+    const {period,snaps}=pd;
+    const startD=new Date(period.startDate);
+    const closedD=period.closedDate?new Date(period.closedDate):null;
+    const dateRange=closedD
+      ?`${startD.toLocaleDateString('he')} – ${closedD.toLocaleDateString('he')}`
+      :`נפתח ${startD.toLocaleDateString('he')}`;
+    const totalReg=snaps.reduce((mx,s)=>Math.max(mx,s.total||0),0);
+    const totalBus=snaps.reduce((mx,s)=>Math.max(mx,s.totalActualBuses||0),0);
+    return `<div style="border:2px solid var(--border);border-radius:14px;margin-bottom:18px;overflow:hidden">
+      <div style="background:var(--navy);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
         <div>
-          <div style="font-size:16px;font-weight:800">${esc(s.name)}</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
+          <div style="font-size:17px;font-weight:800">${esc(period.name)}</div>
+          <div style="font-size:12px;opacity:.75;margin-top:2px">${dateRange}</div>
         </div>
-        <span class="arch-arrow" style="font-size:13px;color:var(--muted);flex-shrink:0">▼</span>
+        <div style="display:flex;gap:12px;flex-shrink:0">
+          ${totalReg?`<div style="text-align:center"><div style="font-size:20px;font-weight:800">${totalReg.toLocaleString('he')}</div><div style="font-size:10px;opacity:.75">נרשמו</div></div>`:''}
+          ${totalBus?`<div style="text-align:center"><div style="font-size:20px;font-weight:800;color:#6EE7B7">🚌 ${totalBus}</div><div style="font-size:10px;opacity:.75">אוטובוסים</div></div>`:''}
+        </div>
       </div>
-      <div hidden style="padding:14px 16px;border-top:1px solid var(--border)">
-        <div style="display:flex;gap:20px;margin-bottom:12px;flex-wrap:wrap">
-          <div style="text-align:center"><div style="font-size:26px;font-weight:800;color:var(--accent)">${s.total.toLocaleString('he')}</div><div style="font-size:12px;color:var(--muted)">נרשמו</div></div>
-          ${s.totalActualBuses?`<div style="text-align:center"><div style="font-size:26px;font-weight:800;color:#059669">${s.totalActualBuses}</div><div style="font-size:12px;color:var(--muted)">אוטובוסים</div></div>`:''}
-        </div>
-        <div style="margin-bottom:10px">${busTag}</div>
-        ${cityRows?`<div style="margin-top:8px">${cityRows}</div>`:''}
-        <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-          <button onclick="snapToggleTable(${s.id},this)" style="height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:13px;cursor:pointer">📋 הצג רשימה</button>
-          <div style="display:flex;gap:8px">
-            <button onclick="snapExcelOne(${s.id})" style="height:32px;padding:0 12px;border:1.5px solid #93C5FD;border-radius:8px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer">📊 Excel</button>
-            <button onclick="if(confirm('למחוק את הרישום?'))snapDelete(${s.id})" style="height:32px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--g100);color:var(--muted);font-family:inherit;font-size:13px;cursor:pointer">🗑 מחק</button>
-          </div>
-        </div>
-        <div id="snap-table-${s.id}" hidden style="margin-top:12px;overflow-x:auto"></div>
+      <div style="padding:12px 14px;background:var(--bg)">
+        ${snaps.map(s=>renderSnapCard(s,period.id)).join('')}
       </div>
     </div>`;
   }).join('');
