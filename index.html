@@ -135,29 +135,48 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
 .toast-info{background:#DBEAFE;color:#1E40AF;border:1px solid #93C5FD}
 /* ══════════ מובייל ══════════ */
 @media(max-width:640px){
-  /* סרגל עליון */
-  .bar-inner{padding:0 12px;height:50px;gap:8px}
-  .brand{font-size:14px}
+  /* ══ סרגל עליון ══ */
+  .bar-inner{padding:0 10px;height:48px;gap:6px}
+  .brand{font-size:13px;gap:5px}
+  .brand small{display:none}
   #refresh-label{display:none}
-  #countdown-ring{width:26px;height:26px}
+  #countdown-ring{width:24px;height:24px}
   #status-lbl{display:none}
-  .btn-refresh{padding:4px 9px;font-size:11px}
-  /* גוף */
+  .btn-refresh{padding:4px 8px;font-size:11px}
+  /* hide pause on mobile - only show refresh + archive + theme */
+  #btn-pause{display:none}
+  /* ══ גוף ══ */
   #body{padding:10px 10px 80px;gap:10px}
   .section{padding:12px 12px;border-radius:12px}
-  .section-head{margin-bottom:10px}
+  .section-head{margin-bottom:10px;gap:8px}
   .section-title{font-size:11px}
-  /* כרטיסי ערים */
+  /* ══ ארכיון — header ══ */
+  #view-archive .section-head{flex-direction:column;align-items:stretch}
+  #view-archive .section-head>div:first-child{order:1}
+  #view-archive .section-head>div:last-child{order:2;display:flex!important;gap:6px;justify-content:flex-start}
+  #view-archive .section-head>div:last-child button,
+  #view-archive .section-head>div:last-child label{flex:1;justify-content:center;font-size:12px;height:34px;text-align:center}
+  /* ══ snap כרטיס — header אשכול כפתורים ══ */
+  .snap-header-btns{flex-wrap:wrap!important;gap:4px!important;justify-content:flex-end}
+  .snap-header-btns button{font-size:11px!important;height:26px!important;padding:0 7px!important}
+  /* ══ snap כרטיס — collapsed header layout ══ */
+  .snap-collapsed-head{flex-wrap:wrap!important;gap:6px!important}
+  .snap-collapsed-info{min-width:0!important;width:100%!important}
+  /* ══ כרטיסי ערים ══ */
   #city-grid{grid-template-columns:repeat(2,1fr);gap:8px}
   #nbhd-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
-  .city-count{font-size:26px}
+  .city-card{padding:12px 12px}
+  .city-count{font-size:24px}
   .city-name{font-size:12px}
-  /* כפתור חזרה בתחתית (sticky) */
+  /* ══ drill back button ══ */
   .btn-back{position:fixed;bottom:16px;right:16px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.25);border-radius:24px;padding:10px 20px;font-size:15px;background:var(--brand);color:#fff;border-color:transparent}
-  /* כותרת drill */
   #drill-header{flex-direction:row-reverse;justify-content:flex-end}
-  .drill-title{font-size:17px}
-  /* טבלה — כרטיסים במקום שורות */
+  .drill-title{font-size:16px}
+  .drill-count{font-size:12px}
+  /* ══ חיפוש + ייצוא ══ */
+  .search-row{flex-direction:column;align-items:stretch;gap:8px}
+  .btn-export{width:100%;text-align:center;justify-content:center}
+  /* ══ טבלה — כרטיסים במקום שורות ══ */
   table,thead,tbody,th,td,tr{display:block}
   thead tr{position:absolute;top:-9999px;right:-9999px}
   tbody tr{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;padding:10px 12px;background:var(--surface)}
@@ -166,16 +185,20 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   tbody td::before{content:attr(data-label);font-size:11px;color:var(--muted);font-weight:700;min-width:70px;flex-shrink:0}
   tbody td.idx{display:none}
   tbody td.phone{direction:ltr;justify-content:flex-end}
-  /* חיפוש + ייצוא */
-  .search-row{flex-direction:column;align-items:stretch}
-  .btn-export{width:100%;text-align:center}
-  /* עמודות */
+  /* ══ עמוד ══ */
   .pager{flex-direction:column;align-items:center;gap:6px}
   .pager-btns button{width:36px;height:36px;font-size:15px}
-  /* עוגה */
+  /* ══ עוגה ══ */
   #pie-wrap,#nbhd-pie-wrap,#ramot-pie-wrap{flex-direction:column;align-items:center;gap:16px}
-  /* רמות */
+  /* ══ רמות ══ */
   #ramot-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
+  /* ══ ארכיון — "חזרה לדף הבית" + כותרת ══ */
+  #view-archive .section-head>div:first-child button{font-size:14px!important;height:40px!important;width:100%}
+  /* ══ snap expanded action buttons ══ */
+  .snap-actions{flex-direction:column!important;align-items:stretch!important}
+  .snap-actions>button,.snap-actions>div{width:100%!important}
+  .snap-actions>div{display:flex!important;flex-direction:column!important;gap:5px!important}
+  .snap-actions>div>button{width:100%!important;justify-content:center!important;height:36px!important;font-size:13px!important}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -254,9 +277,11 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div class="search-row">
         <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
-        <button id="export-btn" class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
-        <button class="btn-export" onclick="printDrill()" style="background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
-        <button class="btn-export" onclick="printSummary(_records,'רישום נוכחי')" style="background:#f9f0f3;border-color:#c4849a;color:#5c1a2e">🖨 סיכום</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%">
+          <button id="export-btn" class="btn-export" onclick="exportExcel()" style="flex:1;min-width:100px">⬇ Excel</button>
+          <button class="btn-export" onclick="printDrill()" style="flex:1;min-width:100px;background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
+          <button class="btn-export" onclick="printSummary(_records,'רישום נוכחי')" style="flex:1;min-width:100px;background:#f9f0f3;border-color:#c4849a;color:#5c1a2e">🖨 סיכום</button>
+        </div>
       </div>
       <div id="sort-bar" hidden style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;font-size:13px"></div>
       <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
@@ -2093,12 +2118,12 @@ function renderSnapCard(s,periodId,opts){
   const periodArg=periodId?`,'${periodId}'`:'';
   return `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
     <div onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.querySelector('.arch-arrow').textContent=this.nextElementSibling.hidden?'▼':'▲'"
-      style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);gap:12px;user-select:none">
-      <div style="flex:1;min-width:0">
+      class="snap-collapsed-head" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);gap:8px;user-select:none;flex-wrap:wrap">
+      <div class="snap-collapsed-info" style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700">${esc(s.name)}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
+      <div class="snap-header-btns" style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
         <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 9px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
         <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printByCity(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 9px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
         <button onclick="snapExcelOne(${s.id})" style="height:28px;padding:0 9px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
@@ -2112,9 +2137,9 @@ function renderSnapCard(s,periodId,opts){
       </div>
       <div style="margin-bottom:8px">${busTag}</div>
       ${cityRows?`<div style="margin-top:6px">${cityRows}</div>`:''}
-      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div class="snap-actions" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <button onclick="snapToggleTable(${s.id},this)" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer">📋 הצג רשימה</button>
-        <div style="display:flex;gap:6px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
           <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printByCity(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:30px;padding:0 10px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
           <button onclick="snapExcelOne(${s.id})" style="height:30px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
