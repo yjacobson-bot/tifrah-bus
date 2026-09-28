@@ -2269,8 +2269,10 @@ async function openGlobalSearch(){
 function closeGlobalSearch(){qs('gs-overlay').hidden=true}
 function gsMatchRec(r,ql){
   const pv=parseValName(r['ValName']??'');
+  const qlDigits=ql.replace(/\D/g,'');
+  const phoneMatch=qlDigits.length>0&&(r['Phone']||r['Folder']||'').replace(/\D/g,'').includes(qlDigits);
   return(pv.last+' '+pv.first).toLowerCase().includes(ql)||
-    (r['Phone']||r['Folder']||'').replace(/\D/g,'').includes(ql.replace(/\D/g,''))||
+    phoneMatch||
     pv.shiur.toLowerCase().includes(ql)||
     cityLabel(r[CITY_KEY]||'').toLowerCase().includes(ql);
 }
