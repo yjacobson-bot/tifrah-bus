@@ -286,8 +286,8 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%">
           <button id="export-btn" class="btn-export" onclick="exportExcel()" style="flex:1;min-width:100px">⬇ Excel</button>
 <button class="btn-export" onclick="printDrill()" style="flex:1;min-width:100px;background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
-          <button class="btn-export" onclick="printSummary(_records,'רישום נוכחי')" style="flex:1;min-width:100px;background:#f9f0f3;border-color:#c4849a;color:#5c1a2e">🖨 סיכום</button>
-          <button class="btn-export" onclick="printSummary(_records,'רישום נוכחי',null,'cities')" style="flex:1;min-width:100px;background:#f0f4ff;border-color:#93c5fd;color:#1e3a8a">🖨 לפי ערים</button>
+          <button class="btn-export" onclick="printSummary(_drillFiltered||_records,'רישום נוכחי')" style="flex:1;min-width:100px;background:#f9f0f3;border-color:#c4849a;color:#5c1a2e">🖨 סיכום</button>
+          <button class="btn-export" onclick="printByCity(_drillFiltered||_records,'רישום נוכחי')" style="flex:1;min-width:100px;background:#f0f4ff;border-color:#93c5fd;color:#1e3a8a">🖨 לפי ערים</button>
         </div>
       </div>
       <div id="sort-bar" hidden style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;font-size:13px"></div>
