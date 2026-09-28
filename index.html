@@ -253,6 +253,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <span id="list-info" class="tbl-info"></span>
         <button id="export-btn" class="btn-export" onclick="exportExcel()">⬇ ייצא Excel</button>
         <button class="btn-export" onclick="printDrill()" style="background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
+        <button class="btn-export" onclick="printSummary(_records,'רישום נוכחי')" style="background:#f9f0f3;border-color:#c4849a;color:#5c1a2e">🖨 סיכום</button>
       </div>
       <div id="sort-bar" hidden style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 4px;border-bottom:1px solid var(--border);margin-bottom:6px;font-size:13px"></div>
       <div class="tbl-wrap"><table><thead id="drill-thead"></thead><tbody id="drill-tbody"></tbody></table></div>
@@ -1447,6 +1448,79 @@ const PRINT_COLS=[
 ];
 let _printColKeys=new Set(['last','first','shiur','phone','city']);
 
+// ===== הדפסת סיכום היררכי =====
+function printSummary(records, title){
+  if(!records||!records.length){showAlert('warning','אין נתונים','');return;}
+  // בנה היררכיה: עיר → שכונה → רמה
+  const cityMap={};
+  records.forEach(r=>{
+    const city=cityLabel(r[CITY_KEY])||'(לא ידוע)';
+    const nbhd=nbhdLabel(r[NBHD_KEY])||'';
+    const ramot=ramotLabel(r['P052'])||'';
+    if(!cityMap[city])cityMap[city]={count:0,nbhds:{}};
+    cityMap[city].count++;
+    if(nbhd){
+      if(!cityMap[city].nbhds[nbhd])cityMap[city].nbhds[nbhd]={count:0,ramot:{}};
+      cityMap[city].nbhds[nbhd].count++;
+      if(ramot){
+        cityMap[city].nbhds[nbhd].ramot[ramot]=(cityMap[city].nbhds[nbhd].ramot[ramot]||0)+1;
+      }
+    } else if(ramot){
+      // רמה ישירות תחת עיר (ללא שכונה)
+      if(!cityMap[city].nbhds['__direct__'])cityMap[city].nbhds['__direct__']={count:0,ramot:{},direct:true};
+      cityMap[city].nbhds['__direct__'].count++;
+      cityMap[city].nbhds['__direct__'].ramot[ramot]=(cityMap[city].nbhds['__direct__'].ramot[ramot]||0)+1;
+    }
+  });
+  const sortedCities=Object.entries(cityMap).sort((a,b)=>b[1].count-a[1].count);
+  const total=records.length;
+  const dateStr=new Date().toLocaleDateString('he',{day:'numeric',month:'long',year:'numeric'});
+
+  let rows='';
+  sortedCities.forEach(([city,cd])=>{
+    rows+=`<tr class="city-row"><td><strong>${city}</strong></td><td><strong>${cd.count}</strong></td></tr>`;
+    const sortedNbhds=Object.entries(cd.nbhds).filter(([k])=>k!=='__direct__').sort((a,b)=>b[1].count-a[1].count);
+    // רמות ישירות תחת עיר
+    const direct=cd.nbhds['__direct__'];
+    sortedNbhds.forEach(([nbhd,nd])=>{
+      rows+=`<tr class="nbhd-row"><td style="padding-right:28px">• ${nbhd}</td><td>${nd.count}</td></tr>`;
+      const sortedRamot=Object.entries(nd.ramot).sort((a,b)=>b[1]-a[1]);
+      if(sortedRamot.length)sortedRamot.forEach(([ramot,cnt])=>{
+        rows+=`<tr class="ramot-row"><td style="padding-right:50px">◦ ${ramot}</td><td>${cnt}</td></tr>`;
+      });
+    });
+    if(direct){
+      Object.entries(direct.ramot).sort((a,b)=>b[1]-a[1]).forEach(([ramot,cnt])=>{
+        rows+=`<tr class="ramot-row"><td style="padding-right:28px">• ${ramot}</td><td>${cnt}</td></tr>`;
+      });
+    }
+  });
+
+  const win=window.open('','_blank','width=700,height=900');
+  if(!win){showAlert('error','חסימת חלון','אפשר חלונות קופצים להדפסה');return;}
+  win.document.write(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+<title>סיכום – ${title||'רישום'}</title>
+<style>
+  body{font-family:'Arial',sans-serif;font-size:14px;margin:30px;color:#111;direction:rtl}
+  h1{font-size:20px;font-weight:800;margin-bottom:4px;color:#5c1a2e}
+  .sub{font-size:12px;color:#666;margin-bottom:20px}
+  .total-box{background:#f9f0f3;border:2px solid #5c1a2e;border-radius:8px;padding:10px 18px;display:inline-block;margin-bottom:20px;font-size:18px;font-weight:800;color:#5c1a2e}
+  table{width:100%;border-collapse:collapse}
+  tr.city-row td{background:#f3eaed;font-size:14px;padding:6px 10px;border-bottom:1px solid #ddd}
+  tr.nbhd-row td{font-size:13px;padding:4px 10px;border-bottom:1px solid #eee;color:#333}
+  tr.ramot-row td{font-size:12px;padding:3px 10px;border-bottom:1px solid #f5f5f5;color:#555}
+  td:last-child{text-align:left;width:60px;font-variant-numeric:tabular-nums}
+  @media print{body{margin:15px}}
+</style></head><body>
+<h1>${title||'סיכום רישום'}</h1>
+<div class="sub">${dateStr}</div>
+<div class="total-box">סה"כ נרשמו: ${total.toLocaleString('he')}</div>
+<table>${rows}</table>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
 function printDrill(){
   if(!_drillFiltered||!_drillFiltered.length){showAlert('warning','אין נתונים','');return}
   const pm=document.getElementById('print-modal');pm.style.display='flex';
@@ -1917,6 +1991,7 @@ function renderSnapCard(s,periodId,opts){
       <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <button onclick="snapToggleTable(${s.id},this)" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer">📋 הצג רשימה</button>
         <div style="display:flex;gap:6px">
+          <button onclick="printSummary((_allSnapsFlat.find(x=>x.id===${s.id})||{}).records||[],'${esc(s.name).replace(/'/g,"\\'")}')" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
           <button onclick="snapExcelOne(${s.id})" style="height:30px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
           <button onclick="if(confirm('למחוק את תמונת המצב?'))snapDelete(${s.id}${periodArg})" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer">🗑</button>
         </div>
