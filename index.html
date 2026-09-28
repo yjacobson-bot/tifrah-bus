@@ -205,7 +205,10 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   <div id="view-archive" hidden>
     <div class="section">
       <div class="section-head">
-        <span class="section-title">📂 ארכיון רישומים</span>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button onclick="toggleArchive()" style="height:38px;padding:0 18px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🏠 חזרה לדף הבית</button>
+          <span class="section-title">📂 ארכיון רישומים</span>
+        </div>
         <div style="display:flex;gap:8px">
           <button onclick="snapExport()" style="height:30px;padding:0 12px;border:1px solid var(--border);border-radius:6px;background:var(--g100);font-size:13px;cursor:pointer;font-family:inherit">⬇ ייצוא JSON</button>
           <label style="height:30px;padding:0 12px;border:1px solid var(--border);border-radius:6px;background:var(--g100);font-size:13px;cursor:pointer;display:flex;align-items:center;font-family:inherit">⬆ ייבוא<input type="file" accept=".json" onchange="snapImport(this)" style="display:none"></label>
@@ -2051,8 +2054,8 @@ function toggleArchive(){
   const btn=document.getElementById('archive-tab-btn');
   const isOpen=!av.hidden;
   av.hidden=isOpen;
-  if(isOpen){dv.hidden=false;btn.textContent='📂 ארכיון';}
-  else{dv.hidden=true;cv.hidden=true;snapLoadAndRender();btn.textContent='⬅ חזרה';}
+  if(isOpen){dv.hidden=false;btn.style.display='';btn.textContent='📂 ארכיון';}
+  else{dv.hidden=true;cv.hidden=true;btn.style.display='none';snapLoadAndRender();}
 }
 
 function toggleTheme(){
