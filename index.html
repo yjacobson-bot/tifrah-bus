@@ -330,15 +330,13 @@ let _currentSha=null;
 
 async function checkVersion(){
   try{
-    const r=await fetch(location.href,{method:'HEAD',cache:'no-store'});
+    const url=location.origin+location.pathname+'?_v='+Date.now();
+    const r=await fetch(url,{method:'HEAD',cache:'no-store'});
     if(!r.ok)return;
-    const lastMod=r.headers.get('last-modified')||r.headers.get('etag')||'';
-    if(!lastMod)return;
-    if(_currentSha===null){_currentSha=lastMod;return;}
-    if(lastMod!==_currentSha){
-      _currentSha=lastMod;
-      showUpdateBanner();
-    }
+    const tag=r.headers.get('etag')||r.headers.get('last-modified')||'';
+    if(!tag)return;
+    if(_currentSha===null){_currentSha=tag;return;}
+    if(tag!==_currentSha){_currentSha=tag;showUpdateBanner();}
   }catch{}
 }
 function showUpdateBanner(){
