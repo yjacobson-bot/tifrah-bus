@@ -2561,7 +2561,20 @@ async function _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd){
   const form=new FormData();
   form.append('file',new Blob([newText],{type:'text/plain'}),approvalPath.split('/').pop());
   const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${approvalPath}`,{method:'POST',body:form});
-  if(!up.ok){const msg=await up.text().catch(()=>'');throw new Error('שגיאה בשמירה'+(msg?': '+msg.slice(0,80):''));}
+  const upMsg=await up.text().catch(()=>'');
+  if(!up.ok) throw new Error('שגיאה בשמירה: '+upMsg.slice(0,120));
+  // אמת שהשורה אכן נשמרה
+  try{
+    const verify=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${approvalPath}`);
+    if(verify.ok){
+      const vTxt=await verify.text();
+      if(!vTxt.includes(`Phone#${phone}`))
+        throw new Error('הרישום לא נמצא בקובץ לאחר השמירה — ייתכן בעיית הרשאות');
+    }
+  }catch(e){
+    if(e.message.includes('לא נמצא'))throw e;
+    // אם האימות עצמו נכשל ברשת — נמשיך בכל זאת
+  }
   closeAddRecord();
   const parsed=parseValName(_addRecordValName);
   showAlert('success','✅ נרשם בהצלחה',`${parsed.first} ${parsed.last} — ${CITY_MAP[city]||''}${city==='1'&&nbhd?' / '+(NBHD_MAP[nbhd]||''):''}`)
