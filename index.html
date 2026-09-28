@@ -2487,6 +2487,8 @@ async function exportPDF(){
     _applyThemePref(t);
   }catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
+  // הצג cache מיידית לפני שמחכים ל-API
+  if(_records.length){try{buildColumns(_records);renderDashboard();}catch{}}
   checkVersion(); // שמירת SHA ראשוני — לא מחכים, רץ ברקע
   await loadData();startTimer();
   setInterval(checkVersion,30000); // כל 30 שניות
