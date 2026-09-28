@@ -748,7 +748,7 @@ async function loadData(){
     // רענון חכם — רק אם הנתונים השתנו
     const fp=_records.length+'|'+(_records[_records.length-1]?.[CITY_KEY]||'')+(_records[0]?.Phone||_records[0]?.Folder||'');
     if(fp!==_dataFingerprint){_dataFingerprint=fp;renderDashboard();}
-    else{setStatus('ok','מעודכן');}
+    else{renderDashboard();setStatus('ok','מעודכן');}
   }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`}
 }
 
