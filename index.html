@@ -109,8 +109,12 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .empty .ico{font-size:40px;margin-bottom:8px}
 .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:60px 20px;width:100%;box-sizing:border-box;text-align:center}
 .loading-logo{width:110px;height:110px;object-fit:contain;animation:spin-logo 1.4s cubic-bezier(.6,0,.4,1) infinite}
+:root[data-theme="light"] .loading-logo,:root:not([data-theme="dark"]):not([data-theme="auto"]) .loading-logo{filter:brightness(0)}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]) .loading-logo{filter:brightness(0)}}
 @keyframes typewriter-fade{0%{opacity:0;clip-path:inset(0 0 0 100%)}35%{opacity:1;clip-path:inset(0 0 0 0%)}70%{opacity:1;clip-path:inset(0 0 0 0%)}90%{opacity:0;clip-path:inset(0 0 0 0%)}100%{opacity:0;clip-path:inset(0 0 0 100%)}}
 .loading-typewriter{font-size:17px;color:var(--muted);font-weight:600;animation:typewriter-fade 5s ease-in-out infinite;display:inline-block;direction:rtl;white-space:nowrap}
+:root[data-theme="light"] .loading-typewriter,:root:not([data-theme="dark"]):not([data-theme="auto"]) .loading-typewriter{color:#111}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]) .loading-typewriter{color:#111}}
 .cd-days-row{font-size:clamp(20px,4vw,28px);font-weight:700;margin-bottom:10px}
 .cd-days-num{font-size:clamp(30px,6vw,44px);font-weight:900;margin-left:6px}
 .cd-days-lbl{font-size:clamp(18px,3vw,24px)}
@@ -1917,7 +1921,7 @@ async function snapSave(name,actualBuses){
     // עדכן cache מקומי
     const pd=_periodsData.find(p=>p.period.id===periodId);
     if(pd){pd.snaps=snaps;}
-    _allSnapsFlat=[..._periodsData.flatMap(p=>p.snaps)];
+    _allSnapsFlat=[..._periodsData.flatMap(p=>p.snaps)].filter((s,i,a)=>a.findIndex(x=>x.id===s.id)===i);
     adminMsg('✅ נשמר','#166534');
     renderSnapList();renderArchiveView();return true;
   }catch(e){adminMsg('שגיאה בשמירה: '+e.message,'#991B1B');return false}
@@ -1939,7 +1943,7 @@ async function snapDelete(snapId,periodId){
     await archPushPeriod(periodId,snaps);
     const pd=_periodsData.find(p=>p.period.id===periodId);
     if(pd)pd.snaps=snaps;
-    _allSnapsFlat=[..._periodsData.flatMap(p=>p.snaps)];
+    _allSnapsFlat=[..._periodsData.flatMap(p=>p.snaps)].filter((s,i,a)=>a.findIndex(x=>x.id===s.id)===i);
     adminMsg('✅ נמחק','#166534');
     renderSnapList();renderArchiveView();
   }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B')}
@@ -1985,7 +1989,7 @@ async function snapLoadAndRender(){
     const snaps=await archFetchPeriod(p.id);
     _periodsData.push({period:p,snaps});
   }
-  _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps);
+  _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps).filter((s,i,a)=>a.findIndex(x=>x.id===s.id)===i);
   renderSnapList();renderArchiveView();
 }
 
@@ -2309,7 +2313,7 @@ async function openGlobalSearch(){
         for(const p of [...idx.periods].reverse()){
           _periodsData.push({period:p,snaps:_periodCache[p.id]||[]});
         }
-        _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps);
+        _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps).filter((s,i,a)=>a.findIndex(x=>x.id===s.id)===i);
       }
       _gsArchiveLoaded=true;
       // אם יש טקסט בתיבה — חפש שוב עם הארכיון
