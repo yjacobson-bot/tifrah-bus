@@ -476,8 +476,10 @@ async function downloadFile(path,timeoutMs=15000){
 }
 async function getDir(path){
   const tok=await ensureToken();
-  try{return parseDirText(await(await fetch(`${API}GetIVR2Dir?token=${tok}&path=ivr2:${path}`)).text())}
-  catch{return{folders:[],files:[]}}
+  try{
+    const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),8000);
+    return parseDirText(await(await fetch(`${API}GetIVR2Dir?token=${tok}&path=ivr2:${path}`,{signal:ctrl.signal})).text())
+  }catch{return{folders:[],files:[]}}
 }
 function parseDirText(text){
   if(!text||text.includes('"responseStatus":"ERROR"'))return{folders:[],files:[]};
