@@ -665,8 +665,11 @@ async function loadExtStatus(){
   }catch{banner.hidden=true;const dc=document.getElementById('dash-content');if(dc)dc.hidden=false;}
 }
 
+let _loadingInProgress=false;
 async function loadData(){
-  if(!credsOK()){qs('cfg-warn').hidden=false;return}
+  if(_loadingInProgress)return; // מניעת טעינות מקביליות
+  _loadingInProgress=true;
+  if(!credsOK()){qs('cfg-warn').hidden=false;_loadingInProgress=false;return}
   clearAlert();
   loadExtStatus(); // בד"כ לא מחכים — נטען במקביל
   try{
@@ -750,6 +753,7 @@ async function loadData(){
     if(fp!==_dataFingerprint){_dataFingerprint=fp;renderDashboard();}
     else{renderDashboard();setStatus('ok','מעודכן');}
   }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`}
+  finally{_loadingInProgress=false;}
 }
 
 function renderMiniPie(items,containerId){
