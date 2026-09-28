@@ -216,7 +216,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <button class="btn-refresh" onclick="manualRefresh()">🔄 רענן</button>
       </div>
     </div>
-    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button id="archive-tab-btn" class="btn-refresh" onclick="toggleArchive()" title="ארכיון רישומים">📂 ארכיון</button><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button><button class="btn-refresh" onclick="openAdmin()" title="פאנל מנהל">⚙️</button></div>
+    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button id="archive-tab-btn" class="btn-refresh" onclick="toggleArchive()" title="ארכיון רישומים">📂 ארכיון</button><button class="btn-refresh" onclick="openGlobalSearch()" title="חיפוש גלובלי">🔍</button><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button><button class="btn-refresh" onclick="openAdmin()" title="פאנל מנהל">⚙️</button></div>
   </div>
 </header>
 
@@ -279,6 +279,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <span id="list-info" class="tbl-info"></span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%">
           <button id="export-btn" class="btn-export" onclick="exportExcel()" style="flex:1;min-width:100px">⬇ Excel</button>
+          <button id="btn-pdf-export" class="btn-export" onclick="exportPDF()" style="flex:1;min-width:100px;background:#fff3e0;border-color:#f59e0b;color:#92400e">📄 PDF</button>
           <button class="btn-export" onclick="printDrill()" style="flex:1;min-width:100px;background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
           <button class="btn-export" onclick="printSummary(_records,'רישום נוכחי')" style="flex:1;min-width:100px;background:#f9f0f3;border-color:#c4849a;color:#5c1a2e">🖨 סיכום</button>
         </div>
@@ -1002,16 +1003,19 @@ function renderDrillTable(){
       const badge=active?`<sup style="font-size:9px;color:var(--accent)">${idx+1}</sup>`:'';
       return`<th class="${active?'sorted':''}" onclick="sortDrill(event,'${c.replace(/'/g,"\\'")}')">
         ${esc(colLabel(c))}${badge}<span class="sort-ico">${active?(asc?'▲':'▼'):'⇅'}</span></th>`;
-    }).join('')+'</tr>';
+    }).join('')+'<th style="width:40px"></th></tr>';
   renderSortBar();
   qs('drill-tbody').innerHTML=pageRows.length
-    ?pageRows.map((r,i)=>`<tr><td class="idx" data-label="#">${start+i+1}</td>${_columns.map(c=>{
-        const v=cellVal(r,c);
-        const cls=(c.toLowerCase().includes('phone')||c==='Folder')?'phone':'';
+    ?pageRows.map((r,i)=>{
+        const phone=r['Phone']||r['Folder']||'';
         const q=(qs('search-in').value||'').toLowerCase();
-        return`<td class="${cls}" data-label="${esc(colLabel(c))}">${highlight(v,q)}</td>`
-      }).join('')}</tr>`).join('')
-    :`<tr><td colspan="${_columns.length+1}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
+        return`<tr><td class="idx" data-label="#">${start+i+1}</td>${_columns.map(c=>{
+          const v=cellVal(r,c);
+          const cls=(c.toLowerCase().includes('phone')||c==='Folder')?'phone':'';
+          return`<td class="${cls}" data-label="${esc(colLabel(c))}">${highlight(v,q)}</td>`;
+        }).join('')}<td style="text-align:center"><button onclick="openEditRecord('${esc(phone)}')" title="ערוך" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 4px;opacity:.6;line-height:1" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">✏️</button></td></tr>`;
+      }).join('')
+    :`<tr><td colspan="${_columns.length+2}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
   qs('list-info').textContent=`${total.toLocaleString('he')} בחורים`;
   qs('page-info').textContent=`עמוד ${_drillPage} / ${pages}`;
   const b=[`<button onclick="goPage(${_drillPage-1})" ${_drillPage<=1?'disabled':''}>›</button>`];
@@ -2232,9 +2236,183 @@ function toggleTheme(){
   qs('btn-theme').textContent=next==='dark'?'☀️':'🌙';
   try{localStorage.setItem('theme',next)}catch{}
 }
+// ══════════════════════════════════════════════
+// חיפוש גלובלי
+// ══════════════════════════════════════════════
+function openGlobalSearch(){
+  qs('gs-overlay').hidden=false;
+  qs('gs-input').value='';
+  qs('gs-results').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">הקלד לחיפוש…</div>';
+  setTimeout(()=>qs('gs-input').focus(),80);
+}
+function closeGlobalSearch(){qs('gs-overlay').hidden=true}
+function gsSearch(){
+  const q=(qs('gs-input').value||'').trim();
+  const out=qs('gs-results');
+  if(!q){out.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">הקלד לחיפוש…</div>';return;}
+  if(!_records||!_records.length){out.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">אין נתונים</div>';return;}
+  const ql=q.toLowerCase();
+  const hits=_records.filter(r=>{
+    const pv=parseValName(r['ValName']??'');
+    return(pv.last+' '+pv.first).toLowerCase().includes(ql)||
+      (r['Phone']||r['Folder']||'').replace(/\D/g,'').includes(ql.replace(/\D/g,''))||
+      pv.shiur.toLowerCase().includes(ql)||
+      cityLabel(r[CITY_KEY]||'').toLowerCase().includes(ql);
+  }).slice(0,50);
+  if(!hits.length){out.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">לא נמצא</div>';return;}
+  out.innerHTML=hits.map(r=>{
+    const pv=parseValName(r['ValName']??'');
+    const phone=r['Phone']||r['Folder']||'';
+    const city=cityLabel(r[CITY_KEY]||'');
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);gap:12px">
+      <div>
+        <div style="font-weight:700;font-size:15px">${highlight(pv.last+' '+pv.first,q)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(city)}${pv.shiur?' · '+esc(pv.shiur):''}</div>
+      </div>
+      <div dir="ltr" style="font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap">${esc(phone)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// עריכת רשומה
+// ══════════════════════════════════════════════
+let _editRec=null;
+function openEditRecord(phone){
+  const rec=_records.find(r=>(r['Phone']||r['Folder'])===phone);
+  if(!rec)return;
+  _editRec=rec;
+  const pv=parseValName(rec['ValName']??'');
+  qs('edit-last').value=pv.last;
+  qs('edit-first').value=pv.first;
+  qs('edit-shiur').value=pv.shiur;
+  qs('edit-phone-disp').textContent=phone;
+  qs('edit-err').hidden=true;
+  qs('edit-overlay').hidden=false;
+  setTimeout(()=>qs('edit-last').focus(),80);
+}
+function closeEditRecord(){qs('edit-overlay').hidden=true;_editRec=null}
+async function saveEditRecord(){
+  if(!_editRec){closeEditRecord();return;}
+  const last=qs('edit-last').value.trim();
+  const first=qs('edit-first').value.trim();
+  const shiur=qs('edit-shiur').value.trim();
+  if(!last&&!first){qs('edit-err').hidden=false;qs('edit-err').textContent='שם חסר';return;}
+  const origVN=_editRec['ValName']||'';
+  const origParts=origVN.split(',').map(s=>s.trim());
+  // שמור שדות אחרי שיעור (אות וכו') אם קיימים
+  const si=origParts.findIndex(p=>p==='שיעור');
+  let extra=[];
+  if(si>=0) extra=origParts.slice(si+2); // מה שאחרי ערך השיעור
+  const newVN=[last,first,shiur?'שיעור':'',shiur,...extra].filter(Boolean).join(',');
+  const btn=qs('edit-save-btn');btn.disabled=true;btn.textContent='שומר…';
+  qs('edit-err').hidden=true;
+  try{
+    const tok=await getToken();
+    // הורד קובץ
+    const approvalPath=`${CONFIG.folder}/ApprovalAll.ymgr`;
+    const dl=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${approvalPath}`);
+    if(!dl.ok)throw new Error('שגיאה בהורדה');
+    let text=await dl.text();
+    const phone=_editRec['Phone']||_editRec['Folder']||'';
+    // עדכן שורה עם הטלפון הזה
+    const lines=text.split('\n');
+    let found=false;
+    const newLines=lines.map(line=>{
+      if(!line.includes(phone))return line;
+      // עדכן ValName בשורה
+      found=true;
+      return line.replace(/ValName#[^%\n]*/,`ValName#${newVN}`);
+    });
+    if(!found)throw new Error('לא נמצאה הרשומה בקובץ');
+    const newText=newLines.join('\n');
+    const form=new FormData();
+    form.append('file',new Blob([newText],{type:'text/plain'}),approvalPath.split('/').pop());
+    const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${approvalPath}`,{method:'POST',body:form});
+    if(!up.ok)throw new Error('שגיאה בשמירה');
+    // עדכן מקומי
+    _editRec['ValName']=newVN;
+    buildColumns(_records);
+    applyDrillFilter();
+    closeEditRecord();
+    showAlert('success','✅ נשמר בהצלחה',`${last} ${first}`);
+  }catch(e){
+    qs('edit-err').hidden=false;
+    qs('edit-err').textContent=e.message||'שגיאה';
+  }finally{
+    btn.disabled=false;btn.textContent='שמור';
+  }
+}
+
+// ══════════════════════════════════════════════
+// ייצוא PDF ישיר (jsPDF + autoTable)
+// ══════════════════════════════════════════════
+async function exportPDF(){
+  if(!_drillFiltered||!_drillFiltered.length){showAlert('error','אין נתונים','אין רשומות לייצוא');return;}
+  const btn=qs('btn-pdf-export');
+  if(btn){btn.disabled=true;btn.textContent='⏳ מייצא…';}
+  try{
+    // טען jsPDF ו-autoTable אם טרם נטענו
+    if(!window.jspdf){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.onload=res;s.onerror=rej;document.head.appendChild(s);
+      });
+    }
+    if(!window.jspdf?.jsPDF){throw new Error('jsPDF לא נטען');}
+    if(typeof window.jspdf.jsPDF.prototype.autoTable==='undefined'){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+        s.onload=res;s.onerror=rej;document.head.appendChild(s);
+      });
+    }
+    const {jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    // כותרת
+    const title=`מערכת הסעות תפרח — ${qs('drill-title')?.textContent||''}`;
+    const dateStr=new Date().toLocaleDateString('he-IL');
+    // עמודות
+    const cols=_columns.map(c=>({header:colLabel(c),dataKey:c}));
+    const body=_drillFiltered.map((r,i)=>{
+      const row={'#':String(i+1)};
+      _columns.forEach(c=>row[c]=String(cellVal(r,c)));
+      return row;
+    });
+    doc.autoTable({
+      head:[[{content:title,colSpan:_columns.length+1,styles:{halign:'center',fontStyle:'bold',fontSize:13}}],
+            [{'#':'#'},..._columns.map(c=>colLabel(c))]],
+      body:body.map(r=>[r['#'],..._columns.map(c=>r[c])]),
+      styles:{font:'helvetica',fontSize:9,halign:'right'},
+      headStyles:{fillColor:[22,47,89],textColor:255,halign:'right'},
+      alternateRowStyles:{fillColor:[240,244,252]},
+      margin:{right:10,left:10,top:10},
+      didDrawPage:(data)=>{
+        doc.setFontSize(8);
+        doc.setTextColor(120);
+        doc.text(dateStr,data.settings.margin.left,doc.internal.pageSize.height-5);
+      }
+    });
+    const stamp=new Date().toISOString().slice(0,10);
+    doc.save(`תפרח_${stamp}.pdf`);
+  }catch(e){
+    showAlert('error','שגיאה בייצוא PDF',e.message||'נסה שנית');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='📄 PDF';}
+  }
+}
+
 // שחזור עדפת ערכת נושא
 (async function(){
-  try{const t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);const btn=qs('btn-theme');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';}}catch{}
+  try{
+    const t=localStorage.getItem('theme');
+    if(t){document.documentElement.setAttribute('data-theme',t);const btn=qs('btn-theme');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';}
+    else{// מצב לילה אוטומטי לפי שעה (20:00–07:00)
+      const h=new Date().getHours();
+      if(h>=20||h<7){document.documentElement.setAttribute('data-theme','dark');const btn=qs('btn-theme');if(btn)btn.textContent='☀️';}
+    }
+  }catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
   await checkVersion(); // שמירת SHA ראשוני
   await loadData();startTimer();
@@ -2387,6 +2565,48 @@ function toggleTheme(){
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button onclick="printModalClose()" style="padding:8px 18px;border-radius:8px;border:1.5px solid var(--border);background:var(--g50);color:var(--fg);font-family:inherit;font-size:13px;cursor:pointer">ביטול</button>
       <button onclick="printModalGo()" style="padding:8px 22px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">הדפס ⬅</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ GLOBAL SEARCH MODAL ═══════════ -->
+<div id="gs-overlay" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;display:flex;align-items:flex-start;justify-content:center;padding:60px 16px 16px" onclick="if(event.target===this)closeGlobalSearch()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:min(520px,100%);direction:rtl;box-shadow:0 24px 80px rgba(0,0,0,.4);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">🔍</span>
+      <input id="gs-input" type="search" placeholder="חיפוש לפי שם, טלפון, שיעור, עיר…" oninput="gsSearch()" onkeydown="if(event.key==='Escape')closeGlobalSearch()"
+        style="flex:1;border:none;background:transparent;font-size:16px;font-family:inherit;color:var(--fg);outline:none;direction:rtl">
+      <button onclick="closeGlobalSearch()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1;padding:0 4px">×</button>
+    </div>
+    <div id="gs-results" style="overflow-y:auto;flex:1;min-height:120px">
+      <div style="text-align:center;padding:40px 0;color:var(--muted)">הקלד לחיפוש…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ EDIT RECORD MODAL ═══════════ -->
+<div id="edit-overlay" hidden style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeEditRecord()">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;width:min(420px,100%);padding:24px 22px;direction:rtl;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <h2 style="margin:0;font-size:17px;font-weight:800">✏️ עריכת רשומה</h2>
+      <button onclick="closeEditRecord()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">טלפון: <span id="edit-phone-disp" dir="ltr" style="font-weight:700;color:var(--fg)"></span></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <label style="font-size:13px;font-weight:600">שם משפחה
+        <input id="edit-last" type="text" style="display:block;width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--g50);color:var(--fg);box-sizing:border-box;direction:rtl">
+      </label>
+      <label style="font-size:13px;font-weight:600">שם פרטי
+        <input id="edit-first" type="text" style="display:block;width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--g50);color:var(--fg);box-sizing:border-box;direction:rtl">
+      </label>
+      <label style="font-size:13px;font-weight:600">שיעור
+        <input id="edit-shiur" type="text" placeholder="לדוגמא: א׳ / ב׳ / ג׳" style="display:block;width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--g50);color:var(--fg);box-sizing:border-box;direction:rtl">
+      </label>
+    </div>
+    <p id="edit-err" hidden style="color:#c0392b;font-size:13px;margin:10px 0 0;font-weight:600"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button onclick="closeEditRecord()" style="padding:8px 18px;border-radius:8px;border:1.5px solid var(--border);background:var(--g50);color:var(--fg);font-family:inherit;font-size:13px;cursor:pointer">ביטול</button>
+      <button id="edit-save-btn" onclick="saveEditRecord()" style="padding:8px 22px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">שמור</button>
     </div>
   </div>
 </div>
