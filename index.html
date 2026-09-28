@@ -2500,10 +2500,7 @@ async function exportPDF(){
   if(_records.length){try{buildColumns(_records);renderDashboard();}catch{}}
   checkVersion(); // שמירת SHA ראשוני — לא מחכים, רץ ברקע
   await loadData();startTimer();
-  setInterval(checkVersion,120000); // כל 2 דקות (GitHub rate limit: 60/hour)
-  // בדוק גם כשהטאב חוזר לפוקוס (אחרי שהיה ברקע)
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkVersion();});
-  window.addEventListener('focus',checkVersion);
+  setInterval(checkVersion,300000); // כל 5 דקות (GitHub rate limit: 60/hour)
   initServiceWorker(); // התראות רקע (אופציונלי)
   renderArchiveView(); // בדיקת גרסה עצמאית כל 60 שניות
 })();
