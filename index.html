@@ -331,19 +331,41 @@ let _currentSha=null;
 async function checkVersion(){
   try{
     const r=await fetch(`https://api.github.com/repos/${GH_REPO}/commits?per_page=1`,
-      {headers:{Accept:'application/vnd.github.v3+json'}});
+      {headers:{Accept:'application/vnd.github.v3+json'},cache:'no-store'});
     if(!r.ok)return;
     const data=await r.json();
     const sha=data[0]?.sha;
     if(!sha)return;
-    if(_currentSha===null){_currentSha=sha;return} // שמירה ראשונית
+    if(_currentSha===null){_currentSha=sha;return}
     if(sha!==_currentSha){
-      _currentSha=sha; // עדכון כדי שהודעה תוצג פעם אחת בלבד
-      // גרסה חדשה!
-      const t=qs('toast');
-      t.className='toast toast-info';
-      t.innerHTML=`<span>🔄 המערכת עודכנה — </span><button onclick="location.reload()" style="background:#1E40AF;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">לחץ לרענון</button>`;
-      t.hidden=false;
+      _currentSha=sha;
+      showUpdateBanner();
+    }
+  }catch{}
+}
+function showUpdateBanner(){
+  const t=qs('toast');
+  t.className='toast toast-info';
+  t.innerHTML=`<span>🔄 המערכת עודכנה — </span><button onclick="location.reload()" style="background:#1E40AF;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">לחץ לרענון</button>`;
+  t.hidden=false;
+}
+async function initServiceWorker(){
+  if(!('serviceWorker' in navigator))return;
+  try{
+    const reg=await navigator.serviceWorker.register('/sw.js');
+    // העבר SHA נוכחי ל-SW כדי שלא יצור false alarm
+    navigator.serviceWorker.ready.then(r=>{
+      if(r.active&&_currentSha)r.active.postMessage({type:'INIT_SHA',sha:_currentSha});
+    });
+    // האזן להודעות מה-SW (עדכון זוהה)
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='NEW_VERSION')showUpdateBanner();
+    });
+    // בקש הרשאת התראות — לא חובה
+    if(Notification.permission==='default'){
+      setTimeout(()=>{
+        Notification.requestPermission();
+      },5000); // אחרי 5 שניות, לא מיד
     }
   }catch{}
 }
@@ -2218,9 +2240,10 @@ function toggleTheme(){
 (async function(){
   try{const t=localStorage.getItem('theme');if(t){document.documentElement.setAttribute('data-theme',t);const btn=qs('btn-theme');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';}}catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
-  checkVersion(); // שמירת SHA ראשוני
+  await checkVersion(); // שמירת SHA ראשוני
   await loadData();startTimer();
   setInterval(checkVersion,60000);
+  initServiceWorker(); // התראות רקע (אופציונלי)
   renderArchiveView(); // בדיקת גרסה עצמאית כל 60 שניות
 })();
 </script>
