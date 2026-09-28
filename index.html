@@ -2409,7 +2409,7 @@ function snapPrintMenu(snapId,type,btnEl){
        onclick="snapDoPrint(${snapId},'${type}');this.closest('.snap-print-menu').remove()">🖨 הדפסה ישירה</button>`+
     `<div style="height:1px;background:var(--border)"></div>`+
     `<button style="${btnStyle}" onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='none'"
-       onclick="snapDoPDF(${snapId},'${type}');this.closest('.snap-print-menu').remove()">📄 הורד PDF</button>`;
+       onclick="snapDoPDF(${snapId},'${type}');this.closest('.snap-print-menu').remove()">📄 שמור כ-PDF</button>`;
   document.body.appendChild(menu);
   setTimeout(()=>document.addEventListener('click',function h(e){
     if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',h);}
@@ -2420,75 +2420,36 @@ function snapDoPrint(snapId,type){
   if(type==='summary') printSummary(s.records||[],s.name||'',s.date);
   else printByCity(s.records||[],s.name||'',s.date);
 }
-function _loadScript(src){
-  return new Promise((res,rej)=>{
-    if(document.querySelector(`script[src="${src}"]`)){res();return;}
-    const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);
-  });
-}
-async function htmlToPDF(htmlStr,filename){
-  await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-  await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-  // iframe נסתר ברוחב A4 (794px)
-  const iframe=document.createElement('iframe');
-  iframe.style.cssText='position:fixed;left:-9999px;top:0;width:794px;height:1px;border:none;visibility:hidden';
-  document.body.appendChild(iframe);
-  try{
-    const clean=htmlStr.replace(/<script>window\.onload=\(\)=>window\.print\(\);<\\\/script>/g,'')
-                       .replace(/<script>window\.onload=\(\)=>window\.print\(\);<\/script>/g,'');
-    iframe.contentDocument.open();
-    iframe.contentDocument.write(clean);
-    iframe.contentDocument.close();
-    await new Promise(r=>setTimeout(r,900)); // המתן לרנדור גופנים
-    const body=iframe.contentDocument.body;
-    const totalH=body.scrollHeight;
-    iframe.style.height=totalH+'px';
-    await new Promise(r=>setTimeout(r,200));
-    // מצא נקודות שבירה (pdf-break) לפני צילום
-    const breakEls=[...iframe.contentDocument.querySelectorAll('.pdf-break')];
-    const breakYsPx=breakEls.map(el=>el.offsetTop);
-    const canvas=await window.html2canvas(body,{
-      scale:2,useCORS:true,allowTaint:true,
-      width:794,height:totalH,windowWidth:794,windowHeight:totalH,scrollX:0,scrollY:0
-    });
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pageW=doc.internal.pageSize.getWidth();
-    const pageH=doc.internal.pageSize.getHeight();
-    const sc=canvas.width/794; // scale factor (=2)
-    const canvasPageH=Math.round(pageH*canvas.width/pageW); // canvas-px per A4 page
-    // נקודות שבירה בפיקסלים של קנבס
-    const breakYsC=[0,...breakYsPx.map(y=>Math.round(y*sc))];
-    let firstPage=true;
-    for(let i=0;i<breakYsC.length;i++){
-      const segStart=breakYsC[i];
-      const segEnd=i+1<breakYsC.length?breakYsC[i+1]:canvas.height;
-      let cy=segStart;
-      while(cy<segEnd){
-        if(!firstPage)doc.addPage();
-        firstPage=false;
-        const sliceH=Math.min(canvasPageH,segEnd-cy);
-        const tmp=document.createElement('canvas');
-        tmp.width=canvas.width;tmp.height=sliceH;
-        tmp.getContext('2d').drawImage(canvas,0,cy,canvas.width,sliceH,0,0,canvas.width,sliceH);
-        doc.addImage(tmp.toDataURL('image/jpeg',0.93),'JPEG',0,0,pageW,sliceH*pageW/canvas.width);
-        cy+=canvasPageH;
-      }
-    }
-    doc.save(filename);
-  }finally{iframe.remove();}
-}
 async function snapDoPDF(snapId,type){
   const s=_allSnapsFlat.find(x=>x.id===snapId)||{};
   const recs=s.records||[];
   if(!recs.length){showAlert('warning','אין נתונים','');return;}
-  try{
-    const fname=(s.name||'').replace(/[\s/\\]/g,'_');
-    const html=type==='summary'
-      ?printSummary(recs,s.name||'',s.date,'html')
-      :printByCity(recs,s.name||'',s.date,'html');
-    await htmlToPDF(html,`${type==='summary'?'סיכום':'לפי_ערים'}_${fname}.pdf`);
-  }catch(e){showAlert('error','שגיאה ביצירת PDF',e.message||'נסה שנית');}
+  const html=type==='summary'
+    ?printSummary(recs,s.name||'',s.date,'html')
+    :printByCity(recs,s.name||'',s.date,'html');
+  // הצג toast "מעבד..."
+  const toast=document.createElement('div');
+  toast.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1A3555;color:#fff;padding:11px 26px;border-radius:12px;font-size:15px;font-weight:700;z-index:9999;box-shadow:0 4px 18px rgba(0,0,0,.35);direction:rtl';
+  toast.textContent='⏳ המסמך בעיבוד…';
+  document.body.appendChild(toast);
+  // פתח חלון מוסתר (מחוץ למסך)
+  const win=window.open('','_blank','width=900,height=1100,left=-2000,top=0');
+  if(!win){toast.remove();showAlert('warning','חסום פופ-אפ','אפשר פתיחת חלונות לאתר זה ונסה שנית');return;}
+  // כתוב HTML ללא auto-print (נפעיל ידנית אחרי רנדור)
+  const clean=html.replace(/<script>window\.onload=\(\)=>window\.print\(\);<\/script>/g,'');
+  win.document.write(clean);
+  win.document.close();
+  // המתן לרנדור גופנים ותמונות
+  await new Promise(r=>setTimeout(r,1300));
+  toast.remove();
+  // הצג הנחיה
+  const hint=document.createElement('div');
+  hint.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:11px 26px;border-radius:12px;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 18px rgba(0,0,0,.35);direction:rtl';
+  hint.textContent='📄 בחלון ההדפסה — בחר יעד: "שמור כ-PDF"';
+  document.body.appendChild(hint);
+  setTimeout(()=>hint.remove(),5000);
+  win.print();
+  setTimeout(()=>{try{win.close();}catch(e){}},4000);
 }
 
 // ══════════════════════════════════════════════
