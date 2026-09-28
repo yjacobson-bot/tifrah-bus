@@ -373,7 +373,8 @@ function showUpdateBanner(){
 async function initServiceWorker(){
   if(!('serviceWorker' in navigator))return;
   try{
-    const reg=await navigator.serviceWorker.register('/sw.js');
+    const swPath=(location.pathname.replace(/\/[^/]*$/,'/')||'/')+'sw.js';
+    const reg=await navigator.serviceWorker.register(swPath);
     // העבר SHA נוכחי ל-SW כדי שלא יצור false alarm
     navigator.serviceWorker.ready.then(r=>{
       if(r.active&&_currentSha)r.active.postMessage({type:'INIT_SHA',sha:_currentSha});
