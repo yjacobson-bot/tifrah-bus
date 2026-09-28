@@ -1667,8 +1667,37 @@ async function snapDelete(snapId,periodId){
 // snapList — flat list לתאימות אחורה
 function snapList(){return _allSnapsFlat;}
 
+// הגירה חד-פעמית מהפורמט הישן (archive.json) לחדש (ארכיון/)
+async function archMigrateIfNeeded(){
+  try{
+    const tok=await ensureToken();
+    // בדוק אם קיים archive.json ישן
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/archive.json`);
+    if(!r.ok)return;
+    const txt=await r.text();
+    if(!txt||!txt.trim()||txt.trim().startsWith('<'))return;
+    const oldSnaps=JSON.parse(txt);
+    if(!Array.isArray(oldSnaps)||!oldSnaps.length)return;
+    // בדוק שהתיקייה החדשה עדיין ריקה
+    const idx=await archFetchIndex();
+    if(idx.periods.length>0)return; // כבר הועבר
+    // צור תקופה ראשונה עם הנתונים הישנים
+    const pid='migrated_'+Date.now();
+    const firstName=oldSnaps[0]?.name||'רישום ישן';
+    const firstDate=oldSnaps[oldSnaps.length-1]?.date||new Date().toISOString();
+    const lastDate=oldSnaps[0]?.date||new Date().toISOString();
+    idx.periods.push({id:pid,name:firstName,startDate:firstDate,closedDate:lastDate});
+    idx.currentPeriodId=null;
+    _periodCache[pid]=oldSnaps;
+    await archPushIndex();
+    await archPushPeriod(pid,oldSnaps);
+    console.log('archive.json הועבר בהצלחה לתיקייה החדשה');
+  }catch(e){console.warn('archMigrateIfNeeded error',e);}
+}
+
 async function snapLoadAndRender(){
   _archiveIndex=null;_periodCache={};_periodsData=[];_allSnapsFlat=[];
+  await archMigrateIfNeeded();
   const idx=await archFetchIndex();
   const periodsRev=[...idx.periods].reverse();
   for(const p of periodsRev){
