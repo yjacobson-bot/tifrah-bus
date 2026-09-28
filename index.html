@@ -1075,7 +1075,7 @@ function adminLogin(){
     qs('admin-reset-confirm').hidden=true;
     qs('close-reg-confirm').hidden=true;
     adminLoadExtTime();loadBlockedCities();renderAdminCities();
-    renderSnapList();
+    snapLoadAndRender();
   } else {
     qs('admin-err').hidden=false;
     qs('admin-pwd-input').value='';
@@ -1533,13 +1533,38 @@ function updateExportBtn(){
 }
 
 // ══════════════════════════════════════════════
-// ארכיון תמונות מצב
+// ארכיון תמונות מצב — נשמר ב-Yemot (archive.json)
 // ══════════════════════════════════════════════
-const SNAP_KEY='tifrah_snapshots';
-function snapList(){try{return JSON.parse(localStorage.getItem(SNAP_KEY)||'[]')}catch{return[]}}
+const ARCHIVE_PATH=()=>`${CONFIG.folder}/archive.json`;
 
-function snapSave(name, actualBuses){
+let _snapCache=null; // cache בזיכרון למניעת קריאות מיותרות
+
+async function snapFetch(){
+  if(_snapCache)return _snapCache;
+  try{
+    const tok=await ensureToken();
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${ARCHIVE_PATH()}`);
+    if(!r.ok){_snapCache=[];return[];}
+    const txt=await r.text();
+    if(!txt||!txt.trim()||txt.trim().startsWith('<')){_snapCache=[];return[];}
+    _snapCache=JSON.parse(txt);
+    return _snapCache;
+  }catch{_snapCache=[];return[];}
+}
+
+async function snapPush(snaps){
+  _snapCache=snaps;
+  try{
+    const tok=await ensureToken();
+    const form=new FormData();
+    form.append('file',new Blob([JSON.stringify(snaps)],{type:'application/json'}),'archive.json');
+    await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${ARCHIVE_PATH()}`,{method:'POST',body:form});
+  }catch(e){console.error('snapPush error',e);}
+}
+
+async function snapSave(name, actualBuses){
   if(!_records||!_records.length){adminMsg('אין נתונים לשמירה','#92400E');return false}
+  adminMsg('⏳ שומר…','#92400E');
   const cities={};
   _records.forEach(r=>{const c=cityLabel(r[CITY_KEY]);cities[c]=(cities[c]||0)+1});
   const totalActual=(actualBuses||[]).reduce((s,x)=>s+(x.buses||0),0);
@@ -1553,13 +1578,32 @@ function snapSave(name, actualBuses){
     totalActualBuses:totalActual,
     records:_records
   };
-  const snaps=snapList();snaps.unshift(snap);if(snaps.length>30)snaps.length=30;
-  try{localStorage.setItem(SNAP_KEY,JSON.stringify(snaps));renderSnapList();renderArchiveView();return true}
-  catch(e){adminMsg('שגיאה בשמירה: '+e.message,'#991B1B');return false}
+  try{
+    const snaps=await snapFetch();
+    snaps.unshift(snap);if(snaps.length>30)snaps.length=30;
+    await snapPush(snaps);
+    adminMsg('✅ נשמר','#166534');
+    renderSnapList();renderArchiveView();return true;
+  }catch(e){adminMsg('שגיאה בשמירה: '+e.message,'#991B1B');return false}
 }
 
-function snapDelete(id){
-  try{localStorage.setItem(SNAP_KEY,JSON.stringify(snapList().filter(s=>s.id!==id)));renderSnapList();renderArchiveView()}catch{}
+async function snapDelete(id){
+  adminMsg('⏳ מוחק…','#92400E');
+  try{
+    const snaps=(await snapFetch()).filter(s=>s.id!==id);
+    await snapPush(snaps);
+    adminMsg('✅ נמחק','#166534');
+    renderSnapList();renderArchiveView();
+  }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B')}
+}
+
+// snapList — סינכרוני מהcache, נטען ב-renderSnapList
+function snapList(){return _snapCache||[]}
+
+async function snapLoadAndRender(){
+  _snapCache=null; // נקה cache כדי לטעון מחדש
+  await snapFetch();
+  renderSnapList();renderArchiveView();
 }
 
 function snapExport(){
@@ -1573,18 +1617,19 @@ function snapExport(){
   adminMsg(`✅ יוצאו ${snaps.length} תמונות מצב`,'#166534');
 }
 
-function snapImport(input){
+async function snapImport(input){
   const file=input.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=e=>{
+  reader.onload=async e=>{
     try{
       const imported=JSON.parse(e.target.result);
       if(!Array.isArray(imported))throw new Error('פורמט לא תקין');
-      const existing=snapList();
+      adminMsg('⏳ מייבא…','#92400E');
+      const existing=await snapFetch();
       const existIds=new Set(existing.map(s=>s.id));
       const newOnes=imported.filter(s=>!existIds.has(s.id));
       const merged=[...existing,...newOnes].sort((a,b)=>b.id-a.id).slice(0,30);
-      localStorage.setItem(SNAP_KEY,JSON.stringify(merged));
+      await snapPush(merged);
       adminMsg(`✅ יובאו ${newOnes.length} תמונות מצב חדשות`,'#166534');
       renderSnapList();
     }catch(err){adminMsg('שגיאה בייבוא: '+err.message,'#991B1B')}
@@ -1768,7 +1813,7 @@ function toggleArchive(){
   const isOpen=!av.hidden;
   av.hidden=isOpen;
   if(isOpen){dv.hidden=false;btn.textContent='📂 ארכיון';}
-  else{dv.hidden=true;cv.hidden=true;renderArchiveView();btn.textContent='⬅ חזרה';}
+  else{dv.hidden=true;cv.hidden=true;snapLoadAndRender();btn.textContent='⬅ חזרה';}
 }
 
 function toggleTheme(){
