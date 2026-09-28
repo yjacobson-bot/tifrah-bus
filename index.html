@@ -672,21 +672,22 @@ async function loadData(){
   if(!credsOK()){qs('cfg-warn').hidden=false;_loadingInProgress=false;return}
   clearAlert();
   loadExtStatus(); // בד"כ לא מחכים — נטען במקביל
+  // הצג ספינר רק אם אין נתונים כבר — לא מוחק תצוגה קיימת!
+  const _LOGO_SRC=document.querySelector('#top-bar img')?.src||'';
+  const _hasData=_records&&_records.length>0;
+  if(!_hasData){
+    qs('city-grid').innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><img class="loading-logo" src="${_LOGO_SRC}" alt=""><p class="loading-text">טוען נתונים…</p></div>`;
+  } else {
+    setStatus('pulse','טוען…');
+  }
   try{
     const folder=CONFIG.folder;
     let found=[];
 
-    const _LOGO_SRC=document.querySelector('#top-bar img')?.src||'';
-    const setLoading=msg=>{
-      qs('city-grid').innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><img class="loading-logo" src="${_LOGO_SRC}" alt=""><p class="loading-text">טוען נתונים…</p></div>`;
-    };
-
     // ── ניסיון 1: ApprovalAll.ymgr — קובץ הרשמות (רשומה אחת לכל מתקשר) ──
-    setLoading('מוריד ApprovalAll.ymgr…');
     const approvalPath=`${folder}/ApprovalAll.ymgr`;
     const approvalText=await downloadFile(approvalPath,12000);
     if(approvalText&&approvalText.trim().length>5&&!approvalText.trim().startsWith('<')){
-      setLoading('מפרסר ApprovalAll.ymgr…');
       const firstLines=approvalText.split('\n').slice(0,5).join('\n');
       console.log('ApprovalAll.ymgr raw:\n'+firstLines);
       window._rawSample=firstLines; // שמור לתצוגה
@@ -696,11 +697,9 @@ async function loadData(){
 
     // ── ניסיון 2: אם לא מצאנו — טען LogRecordingAndEnteringData.ymgr ──
     if(!found.length){
-      setLoading('מוריד LogRecordingAndEnteringData.ymgr…');
       const logPath=`${folder}/LogRecordingAndEnteringData.ymgr`;
       const logText=await downloadFile(logPath,30000);
       if(logText&&logText.trim().length>5){
-        setLoading('מפרסר נתוני Log…');
         const recs=parseYMGR(logText);
         if(recs.length){recs.forEach(r=>{r._path=logPath});found.push(...recs)}
       }
@@ -708,10 +707,8 @@ async function loadData(){
 
     // ── ניסיון 3: גלישת תיקייה ──
     if(!found.length){
-      setLoading('מחפש קבצים בתיקייה…');
       const{files}=await getDir(folder);
       for(const f of files.filter(f=>f&&f.toLowerCase().endsWith('.ymgr'))){
-        setLoading(`מוריד ${f}…`);
         const text=await downloadFile(`${folder}/${f}`);
         if(text&&text.trim().length>5){
           const recs=parseYMGR(text);
@@ -720,7 +717,11 @@ async function loadData(){
       }
     }
     if(!found.length){
-      qs('city-grid').innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><img class="loading-logo" src="${_LOGO_SRC}" alt="" style="animation:none;opacity:.55"><span class="loading-typewriter">הנתונים יעודכנו מייד כשהראשון יירשם</span></div>`;
+      if(!_hasData){
+        qs('city-grid').innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><img class="loading-logo" src="${_LOGO_SRC}" alt="" style="animation:none;opacity:.55"><span class="loading-typewriter">הנתונים יעודכנו מייד כשהראשון יירשם</span></div>`;
+      } else {
+        setStatus('ok','מעודכן'); // יש נתונים ישנים — שמור אותם
+      }
       return;
     }
     const sample=found[0]||{};
