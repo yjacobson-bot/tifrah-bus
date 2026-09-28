@@ -1984,9 +1984,13 @@ function renderSnapCard(s,periodId,opts){
   return `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
     <div onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.querySelector('.arch-arrow').textContent=this.nextElementSibling.hidden?'▼':'▲'"
       style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);gap:12px;user-select:none">
-      <div>
+      <div style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700">${esc(s.name)}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
+        <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
+        <button onclick="snapExcelOne(${s.id})" style="height:28px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
       </div>
       <span class="arch-arrow" style="font-size:13px;color:var(--muted);flex-shrink:0">▼</span>
     </div>
