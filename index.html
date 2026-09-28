@@ -2370,7 +2370,7 @@ async function saveEditRecord(){
   const btn=qs('edit-save-btn');btn.disabled=true;btn.textContent='שומר…';
   qs('edit-err').hidden=true;
   try{
-    const tok=await getToken();
+    const tok=await ensureToken();
     // הורד קובץ
     const approvalPath=`${CONFIG.folder}/ApprovalAll.ymgr`;
     const dl=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${approvalPath}`);
@@ -2438,7 +2438,7 @@ async function verifyAddID(){
   const btn=qs('add-verify-btn');
   btn.disabled=true;btn.textContent='בודק…';
   try{
-    const tok=await getToken();
+    const tok=await ensureToken();
     // נסה קודם EnterIDValName.ini (ID=ValName)
     let found='';
     try{
@@ -2461,13 +2461,40 @@ async function verifyAddID(){
       }catch(e){}
     }
     if(!found){errEl.textContent='מספר ת.ז. לא נמצא בקובץ';errEl.hidden=false;btn.disabled=false;btn.textContent='אמת';return;}
+    // בדוק אם הת.ז. הזו כבר רשומה ב-ApprovalAll.ymgr
+    try{
+      const ar=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ApprovalAll.ymgr`);
+      if(ar.ok){
+        const arTxt=await ar.text();
+        const vn=found.trim();
+        if(arTxt.split('\n').some(l=>{const m=l.match(/ValName#([^%\n]*)/);return m&&m[1].trim()===vn;})){
+          errEl.textContent='⛔ ת.ז. זו כבר רשומה במערכת';errEl.hidden=false;btn.disabled=false;btn.textContent='אמת';return;
+        }
+      }
+    }catch(e){}
     _addRecordValName=found;
     const parsed=parseValName(found);
     qs('add-id-name').textContent=`${parsed.first} ${parsed.last}`;
     qs('add-id-shiur').textContent=parsed.shiur?`שיעור: ${parsed.shiur}`:'';
+    // בדוק אם השלוחה סגורה — אזהרה בלבד (מנהל יכול לרשום גם כשסגור)
+    let closedWarning='';
+    try{
+      const ex=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`);
+      if(ex.ok){
+        const exTxt=await ex.text();
+        const now=new Date();
+        const endM=exTxt.match(/^enter_foldar_end_time=(.+)$/m);
+        const startM=exTxt.match(/^enter_after_time=(.+)$/m);
+        const endTime=endM?parseYmTime(endM[1]):null;
+        const startTime=startM?parseYmTime(startM[1]):null;
+        if(endTime&&now>endTime) closedWarning='⚠️ השלוחה סגורה לרישום — הרישום ייכנס בכל זאת';
+        else if(startTime&&now<startTime) closedWarning='⚠️ הרישום טרם נפתח — הרישום ייכנס בכל זאת';
+      }
+    }catch(e){}
     // מעבר לשלב 2
     qs('add-step1').hidden=true;
     qs('add-step2').hidden=false;
+    if(closedWarning){const w=qs('add-step2-warn');w.textContent=closedWarning;w.hidden=false;}else{qs('add-step2-warn').hidden=true;}
     qs('add-step2-err').hidden=true;
     qs('add-step2-warn').hidden=true;
     qs('add-phone').value='';
@@ -2501,7 +2528,7 @@ async function saveNewRecord(){
   const btn=qs('add-save-btn');
   btn.disabled=true;btn.textContent='שומר…';
   try{
-    const tok=await getToken();
+    const tok=await ensureToken();
     const approvalPath=`${CONFIG.folder}/ApprovalAll.ymgr`;
     const dl=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${approvalPath}`);
     if(!dl.ok)throw new Error('שגיאה בהורדת הקובץ');
@@ -2512,13 +2539,6 @@ async function saveNewRecord(){
       errEl.textContent='מספר טלפון זה כבר רשום במערכת';errEl.hidden=false;
       btn.disabled=false;btn.textContent='שמור רישום';return;
     }
-    // בדוק כפילות ValName (אזהרה בלבד)
-    if(lines.some(l=>{const m=l.match(/ValName#([^%\n]*)/);return m&&m[1].trim()===_addRecordValName.trim()})){
-      warnEl.textContent='⚠️ שם זה כבר מופיע ברישומים — ייתכן שכבר נרשם. האם להמשיך?';
-      warnEl.innerHTML=warnEl.textContent+'<br><button onclick="saveNewRecordForce()" style="margin-top:8px;padding:6px 16px;border-radius:7px;border:none;background:#F59E0B;color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">המשך בכל זאת</button>';
-      warnEl.hidden=false;
-      btn.disabled=false;btn.textContent='שמור רישום';return;
-    }
     await _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd);
   }catch(e){
     errEl.textContent=e.message||'שגיאה';errEl.hidden=false;
@@ -2526,28 +2546,6 @@ async function saveNewRecord(){
   }
 }
 
-// שמירה בכפייה (אחרי אזהרת כפילות שם)
-async function saveNewRecordForce(){
-  qs('add-step2-err').hidden=true;
-  qs('add-step2-warn').hidden=true;
-  const btn=qs('add-save-btn');
-  btn.disabled=true;btn.textContent='שומר…';
-  const phone=qs('add-phone').value.replace(/\D/g,'').trim();
-  const city=qs('add-city').value;
-  const nbhd=qs('add-nbhd').value;
-  try{
-    const tok=await getToken();
-    const approvalPath=`${CONFIG.folder}/ApprovalAll.ymgr`;
-    const dl=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${approvalPath}`);
-    if(!dl.ok)throw new Error('שגיאה בהורדת הקובץ');
-    const text=await dl.text();
-    const lines=text.split('\n').filter(l=>l.trim());
-    await _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd);
-  }catch(e){
-    qs('add-step2-err').textContent=e.message||'שגיאה';qs('add-step2-err').hidden=false;
-    btn.disabled=false;btn.textContent='שמור רישום';
-  }
-}
 
 async function _doSaveNewRecord(tok,approvalPath,lines,phone,city,nbhd){
   // בנה שורת רשומה חדשה
