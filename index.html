@@ -1503,21 +1503,25 @@ function printSummary(records, title, snapDate){
   win.document.write(`<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8">
 <title>סיכום – ${title||'רישום'}</title>
 <style>
-  body{font-family:'Arial',sans-serif;font-size:14px;margin:30px;color:#000;direction:rtl}
+  body{font-family:'Arial',sans-serif;font-size:14px;margin:30px;color:#111;direction:rtl}
   h1{font-size:20px;font-weight:800;margin-bottom:4px;color:#5c1a2e}
-  .sub{font-size:12px;color:#444;margin-bottom:20px}
-  .total-box{background:#eaf1fb;border:2px solid #1A3555;border-radius:8px;padding:10px 18px;display:inline-block;margin-bottom:20px;font-size:18px;font-weight:800;color:#1A3555}
+  .sub{font-size:12px;color:#666;margin-bottom:20px}
+  .total-box{background:#f9f0f3;border:2px solid #5c1a2e;border-radius:8px;padding:10px 18px;display:inline-block;margin-bottom:20px;font-size:18px;font-weight:800;color:#5c1a2e}
   table{width:100%;border-collapse:collapse}
-  tr.city-row td{background:#dbeafe;color:#000;font-size:14px;padding:6px 10px;border-bottom:1px solid #93c5fd}
-  tr.nbhd-row td{font-size:13px;padding:4px 10px;border-bottom:1px solid #e0eeff;color:#000}
-  tr.ramot-row td{font-size:12px;padding:3px 10px;border-bottom:1px solid #f0f5ff;color:#222}
+  tr.city-row td{background:#f3eaed;font-size:14px;padding:6px 10px;border-bottom:1px solid #ddd}
+  tr.nbhd-row td{font-size:13px;padding:4px 10px;border-bottom:1px solid #eee;color:#333}
+  tr.ramot-row td{font-size:12px;padding:3px 10px;border-bottom:1px solid #f5f5f5;color:#555}
   td:last-child{text-align:left;width:60px;font-variant-numeric:tabular-nums}
+  .print-logo{display:block;width:60px;height:60px;object-fit:contain;margin:0 auto 12px;filter:brightness(0)}
+  .print-footer{margin-top:30px;border-top:1px solid #ddd;padding-top:10px;font-size:11px;color:#888;text-align:center}
   @media print{body{margin:15px}}
 </style></head><body>
+<img class="print-logo" src="${document.querySelector('#top-bar img')?.src||''}" alt="לוגו">
 <h1>${title||'סיכום רישום'}</h1>
 <div class="sub">${snapDateStr?`תאריך רישום: ${snapDateStr}<br>`:''}הודפס: ${printDateStr}</div>
 <div class="total-box">סה"כ נרשמו: ${total.toLocaleString('he')}</div>
 <table>${rows}</table>
+<div class="print-footer">הודפס ע"י מערכת רישום הסעות ישיבת תפרח · ${printDateStr}</div>
 <script>window.onload=()=>window.print();<\/script>
 </body></html>`);
   win.document.close();
