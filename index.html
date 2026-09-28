@@ -353,16 +353,7 @@ async function checkVersion(){
       return;
     }
   }catch{}
-  try{
-    // ניסיון 2: ETag / Last-Modified של הקובץ עצמו
-    const url=location.origin+location.pathname+'?_v='+Date.now();
-    const r=await fetch(url,{method:'HEAD',cache:'no-store'});
-    if(!r.ok)return;
-    const tag=r.headers.get('etag')||r.headers.get('last-modified')||'';
-    if(!tag)return;
-    if(_currentSha===null){_currentSha=tag;return;}
-    if(tag!==_currentSha){_currentSha=tag;showUpdateBanner();}
-  }catch{}
+  // ניסיון 2 הוסר — ETag של GitHub Pages לא אמין (משתנה ב-CDN בלי שינוי קוד)
 }
 function showUpdateBanner(){
   const t=qs('toast');
