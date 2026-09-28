@@ -343,7 +343,7 @@ async function checkVersion(){
     // ניסיון 1: GitHub API — SHA קומיט אמין
     const ghUrl=`https://api.github.com/repos/${GH_REPO}/commits/main`;
     const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),5000);
-    const r=await fetch(ghUrl,{cache:'no-store',signal:ctrl.signal,headers:{Accept:'application/vnd.github.v3+json','X-RateLimit-Resource':'core'}});
+    const r=await fetch(ghUrl,{cache:'no-store',signal:ctrl.signal,headers:{Accept:'application/vnd.github.v3+json'}});
     if(r.ok){
       const j=await r.json();
       const sha=(j.sha||'').slice(0,10);
@@ -744,7 +744,6 @@ async function loadData(){
       // אין נתונים בשרת — נקה cache ישן ואפס תצוגה
       _records=[];
       try{localStorage.removeItem('tifrah_records_cache');}catch{}
-      _hasData=false;
       _prevCount=0;
       qs('city-grid').innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><img class="loading-logo" src="${_LOGO_SRC}" alt="" style="animation:none;opacity:.55"><span class="loading-typewriter">הנתונים יעודכנו מייד כשהראשון יירשם</span></div>`;
       setStatus('ok','מעודכן');
