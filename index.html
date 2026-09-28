@@ -2230,14 +2230,29 @@ function toggleArchive(){
   else{dv.hidden=true;cv.hidden=true;btn.style.display='none';snapLoadAndRender();}
 }
 
+let _autoThemeTimer=null;
+function _autoThemeTick(){
+  const h=new Date().getHours();
+  document.documentElement.setAttribute('data-theme',(h>=20||h<7)?'dark':'light');
+}
+function _applyThemePref(val){
+  const btn=qs('btn-theme');
+  if(val==='auto'){
+    _autoThemeTick();
+    if(btn){btn.textContent='🌗';btn.title='אוטומטי לפי שעה — לחץ למצב יום';}
+    if(!_autoThemeTimer)_autoThemeTimer=setInterval(_autoThemeTick,60000);
+  } else {
+    if(_autoThemeTimer){clearInterval(_autoThemeTimer);_autoThemeTimer=null;}
+    document.documentElement.setAttribute('data-theme',val);
+    if(val==='dark'){if(btn){btn.textContent='☀️';btn.title='מצב לילה — לחץ לאוטומטי';}}
+    else{if(btn){btn.textContent='🌙';btn.title='מצב יום — לחץ למצב לילה';}}
+  }
+}
 function toggleTheme(){
-  const root=document.documentElement;
-  const cur=root.getAttribute('data-theme');
-  const isDark=cur==='dark'||(cur===null&&window.matchMedia('(prefers-color-scheme:dark)').matches);
-  const next=isDark?'light':'dark';
-  root.setAttribute('data-theme',next);
-  qs('btn-theme').textContent=next==='dark'?'☀️':'🌙';
+  const cur=localStorage.getItem('theme')||'auto';
+  const next=cur==='light'?'dark':cur==='dark'?'auto':'light';
   try{localStorage.setItem('theme',next)}catch{}
+  _applyThemePref(next);
 }
 // ══════════════════════════════════════════════
 // חיפוש גלובלי
@@ -2514,12 +2529,8 @@ async function exportPDF(){
 // שחזור עדפת ערכת נושא
 (async function(){
   try{
-    const t=localStorage.getItem('theme');
-    if(t){document.documentElement.setAttribute('data-theme',t);const btn=qs('btn-theme');if(btn)btn.textContent=t==='dark'?'☀️':'🌙';}
-    else{// מצב לילה אוטומטי לפי שעה (20:00–07:00)
-      const h=new Date().getHours();
-      if(h>=20||h<7){document.documentElement.setAttribute('data-theme','dark');const btn=qs('btn-theme');if(btn)btn.textContent='☀️';}
-    }
+    const t=localStorage.getItem('theme')||'auto';
+    _applyThemePref(t);
   }catch{}
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
   await checkVersion(); // שמירת SHA ראשוני
