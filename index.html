@@ -383,6 +383,9 @@ async function initServiceWorker(){
 }
 
 let _token=null,_tokenAt=0,_records=[],_columns=[];
+// טען cache אחרון מ-localStorage (מוצג מיד, לפני ה-fetch)
+try{const c=localStorage.getItem('tifrah_records_cache');if(c){_records=JSON.parse(c);}}catch{}
+
 // שדות קבועים לפי ApprovalAll.ini
 const CITY_KEY='P050';
 const NBHD_KEY='P051';
@@ -752,6 +755,7 @@ async function loadData(){
       _records=[...byPhone.values()];
     }
     buildColumns(_records);
+    try{localStorage.setItem('tifrah_records_cache',JSON.stringify(_records));}catch{}
     // התראה על בחורים חדשות
     if(_prevCount!==null&&_records.length>_prevCount){
       const diff=_records.length-_prevCount;
