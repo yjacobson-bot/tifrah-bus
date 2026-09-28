@@ -2238,34 +2238,76 @@ function toggleTheme(){
 // ══════════════════════════════════════════════
 // חיפוש גלובלי
 // ══════════════════════════════════════════════
-function openGlobalSearch(){
+let _gsArchiveLoaded=false;
+async function openGlobalSearch(){
   qs('gs-overlay').hidden=false;
   qs('gs-input').value='';
   qs('gs-results').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">הקלד לחיפוש…</div>';
   setTimeout(()=>qs('gs-input').focus(),80);
+  // טען ארכיון ברקע אם טרם נטען
+  if(!_gsArchiveLoaded&&credsOK()){
+    try{
+      const idx=await archFetchIndex();
+      for(const p of [...idx.periods].reverse()){
+        if(!_periodCache[p.id]){
+          await archFetchPeriod(p.id);
+        }
+      }
+      if(!_allSnapsFlat.length){
+        _periodsData=[];
+        for(const p of [...idx.periods].reverse()){
+          _periodsData.push({period:p,snaps:_periodCache[p.id]||[]});
+        }
+        _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps);
+      }
+      _gsArchiveLoaded=true;
+      // אם יש טקסט בתיבה — חפש שוב עם הארכיון
+      if(qs('gs-input').value.trim()) gsSearch();
+    }catch(e){console.warn('gs archive load',e);}
+  }
 }
 function closeGlobalSearch(){qs('gs-overlay').hidden=true}
+function gsMatchRec(r,ql){
+  const pv=parseValName(r['ValName']??'');
+  return(pv.last+' '+pv.first).toLowerCase().includes(ql)||
+    (r['Phone']||r['Folder']||'').replace(/\D/g,'').includes(ql.replace(/\D/g,''))||
+    pv.shiur.toLowerCase().includes(ql)||
+    cityLabel(r[CITY_KEY]||'').toLowerCase().includes(ql);
+}
 function gsSearch(){
   const q=(qs('gs-input').value||'').trim();
   const out=qs('gs-results');
   if(!q){out.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">הקלד לחיפוש…</div>';return;}
-  if(!_records||!_records.length){out.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">אין נתונים</div>';return;}
   const ql=q.toLowerCase();
-  const hits=_records.filter(r=>{
-    const pv=parseValName(r['ValName']??'');
-    return(pv.last+' '+pv.first).toLowerCase().includes(ql)||
-      (r['Phone']||r['Folder']||'').replace(/\D/g,'').includes(ql.replace(/\D/g,''))||
-      pv.shiur.toLowerCase().includes(ql)||
-      cityLabel(r[CITY_KEY]||'').toLowerCase().includes(ql);
-  }).slice(0,50);
-  if(!hits.length){out.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted)">לא נמצא</div>';return;}
-  out.innerHTML=hits.map(r=>{
+  // חיפוש ברישום הנוכחי
+  const currentHits=((_records||[]).filter(r=>gsMatchRec(r,ql))).map(r=>({r,source:'נוכחי',snapName:''}));
+  // חיפוש בארכיון
+  const archHits=[];
+  const seen=new Set();
+  for(const snap of _allSnapsFlat){
+    for(const r of (snap.records||[])){
+      const phone=r['Phone']||r['Folder']||'';
+      const key=phone+'|'+(r['ValName']||'');
+      if(seen.has(key))continue;
+      if(gsMatchRec(r,ql)){seen.add(key);archHits.push({r,source:'ארכיון',snapName:snap.name||''});}
+    }
+  }
+  const allHits=[...currentHits,...archHits].slice(0,60);
+  if(!allHits.length){
+    out.innerHTML=`<div style="text-align:center;padding:40px 0;color:var(--muted)">לא נמצא${_gsArchiveLoaded?'':' (ארכיון טוען…)'}</div>`;
+    return;
+  }
+  const archiveNote=!_gsArchiveLoaded?'<div style="text-align:center;font-size:11px;color:var(--muted);padding:6px">⏳ ארכיון טוען…</div>':'';
+  out.innerHTML=archiveNote+allHits.map(({r,source,snapName})=>{
     const pv=parseValName(r['ValName']??'');
     const phone=r['Phone']||r['Folder']||'';
     const city=cityLabel(r[CITY_KEY]||'');
+    const badge=source==='ארכיון'
+      ?`<span style="font-size:10px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;border-radius:4px;padding:1px 5px;margin-inline-start:6px">${snapName||'ארכיון'}</span>`
+      :`<span style="font-size:10px;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:4px;padding:1px 5px;margin-inline-start:6px">נוכחי</span>`;
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);gap:12px">
       <div>
-        <div style="font-weight:700;font-size:15px">${highlight(pv.last+' '+pv.first,q)}</div>
+        <div style="font-weight:700;font-size:15px">${highlight(pv.last+' '+pv.first,q)}${badge}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(city)}${pv.shiur?' · '+esc(pv.shiur):''}</div>
       </div>
       <div dir="ltr" style="font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap">${esc(phone)}</div>
