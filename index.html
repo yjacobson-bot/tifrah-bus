@@ -1496,8 +1496,8 @@ function printByCity(records, title, snapDate){
   const ROWS_FIRST=26;  // rows per first page of section (has header)
   const ROWS_CONT=36;   // rows per continuation pages
   const sortRows=(rows)=>[...rows].sort((a,b)=>{
-    const he={sensitivity:'base',locale:'he'};
-    return a.last.localeCompare(b.last,'he',he)||a.first.localeCompare(b.first,'he',he)||a.shiur.localeCompare(b.shiur,'he',he);
+    const he={sensitivity:'base'};
+    return a.shiur.localeCompare(b.shiur,'he',he)||a.last.localeCompare(b.last,'he',he)||a.first.localeCompare(b.first,'he',he);
   });
   const mkRows=(rows,startIdx=1)=>rows.map((r,i)=>`<tr><td class="idx-col">${startIdx+i}</td><td>${esc(r.last)}</td><td>${esc(r.first)}</td><td>${esc(r.shiur)}</td><td dir="ltr">${esc(r.phone)}</td></tr>`).join('');
   // Split rows into page-sized chunks
