@@ -1553,7 +1553,7 @@ function printByCity(records, title, snapDate, mode){
         </div>`;
       }
       const startIdx=pages.slice(0,pi).reduce((s,p)=>s+p.length,0)+1;
-      return `<div style="${breakStyle}">
+      return `<div class="${noBreak?'':'pdf-break'}" style="${breakStyle}">
         ${header}
         <table><thead><tr><th class="idx-col">#</th><th>שם משפחה</th><th>שם פרטי</th><th>שיעור</th><th>טלפון</th></tr></thead>
         <tbody>${mkRows(pageRows,startIdx)}</tbody></table>
@@ -2444,22 +2444,36 @@ async function htmlToPDF(htmlStr,filename){
     const totalH=body.scrollHeight;
     iframe.style.height=totalH+'px';
     await new Promise(r=>setTimeout(r,200));
+    // מצא נקודות שבירה (pdf-break) לפני צילום
+    const breakEls=[...iframe.contentDocument.querySelectorAll('.pdf-break')];
+    const breakYsPx=breakEls.map(el=>el.offsetTop);
     const canvas=await window.html2canvas(body,{
       scale:2,useCORS:true,allowTaint:true,
       width:794,height:totalH,windowWidth:794,windowHeight:totalH,scrollX:0,scrollY:0
     });
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const imgData=canvas.toDataURL('image/jpeg',0.93);
     const pageW=doc.internal.pageSize.getWidth();
     const pageH=doc.internal.pageSize.getHeight();
-    const imgW=pageW;
-    const imgH=canvas.height*pageW/canvas.width;
-    let remaining=imgH,y=0,page=0;
-    while(remaining>0){
-      if(page>0)doc.addPage();
-      doc.addImage(imgData,'JPEG',0,-y,imgW,imgH);
-      y+=pageH;remaining-=pageH;page++;
+    const sc=canvas.width/794; // scale factor (=2)
+    const canvasPageH=Math.round(pageH*canvas.width/pageW); // canvas-px per A4 page
+    // נקודות שבירה בפיקסלים של קנבס
+    const breakYsC=[0,...breakYsPx.map(y=>Math.round(y*sc))];
+    let firstPage=true;
+    for(let i=0;i<breakYsC.length;i++){
+      const segStart=breakYsC[i];
+      const segEnd=i+1<breakYsC.length?breakYsC[i+1]:canvas.height;
+      let cy=segStart;
+      while(cy<segEnd){
+        if(!firstPage)doc.addPage();
+        firstPage=false;
+        const sliceH=Math.min(canvasPageH,segEnd-cy);
+        const tmp=document.createElement('canvas');
+        tmp.width=canvas.width;tmp.height=sliceH;
+        tmp.getContext('2d').drawImage(canvas,0,cy,canvas.width,sliceH,0,0,canvas.width,sliceH);
+        doc.addImage(tmp.toDataURL('image/jpeg',0.93),'JPEG',0,0,pageW,sliceH*pageW/canvas.width);
+        cy+=canvasPageH;
+      }
     }
     doc.save(filename);
   }finally{iframe.remove();}
