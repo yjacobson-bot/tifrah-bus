@@ -2151,8 +2151,8 @@ function renderSnapCard(s,periodId,opts){
         <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}</div>
       </div>
       <div class="snap-header-btns" style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
-        <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 9px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
-        <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printByCity(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:28px;padding:0 9px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
+        <button onclick="snapPrintMenu(${s.id},'summary',this)" style="height:28px;padding:0 9px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום ▾</button>
+        <button onclick="snapPrintMenu(${s.id},'city',this)" style="height:28px;padding:0 9px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים ▾</button>
         <button onclick="snapExcelOne(${s.id})" style="height:28px;padding:0 9px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
       </div>
       <span class="arch-arrow" style="font-size:13px;color:var(--muted);flex-shrink:0">▼</span>
@@ -2167,8 +2167,8 @@ function renderSnapCard(s,periodId,opts){
       <div class="snap-actions" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <button onclick="snapToggleTable(${s.id},this)" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--fg);font-family:inherit;font-size:12px;cursor:pointer">📋 הצג רשימה</button>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printSummary(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום</button>
-          <button onclick="(function(){const _s=_allSnapsFlat.find(x=>x.id===${s.id})||{};printByCity(_s.records||[],'${esc(s.name).replace(/'/g,"\\'")}',_s.date)})()" style="height:30px;padding:0 10px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים</button>
+          <button onclick="snapPrintMenu(${s.id},'summary',this)" style="height:30px;padding:0 10px;border:1.5px solid #c4849a;border-radius:7px;background:#f9f0f3;color:#5c1a2e;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 סיכום ▾</button>
+          <button onclick="snapPrintMenu(${s.id},'city',this)" style="height:30px;padding:0 10px;border:1.5px solid #6ee7b7;border-radius:7px;background:#ecfdf5;color:#065f46;font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">🖨 לפי ערים ▾</button>
           <button onclick="snapExcelOne(${s.id})" style="height:30px;padding:0 10px;border:1.5px solid #93C5FD;border-radius:7px;background:var(--accent-dim);color:var(--accent);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">📊 Excel</button>
           <button onclick="if(confirm('למחוק את תמונת המצב?'))snapDelete(${s.id}${periodArg})" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:7px;background:var(--g100);color:var(--muted);font-family:inherit;font-size:12px;cursor:pointer">🗑</button>
         </div>
@@ -2384,6 +2384,97 @@ async function saveEditRecord(){
     qs('edit-err').textContent=e.message||'שגיאה';
   }finally{
     btn.disabled=false;btn.textContent='שמור';
+  }
+}
+
+// ══════════════════════════════════════════════
+// תפריט הדפסה / PDF לתמונות מצב
+// ══════════════════════════════════════════════
+function snapPrintMenu(snapId,type,btnEl){
+  document.querySelectorAll('.snap-print-menu').forEach(m=>m.remove());
+  const menu=document.createElement('div');
+  menu.className='snap-print-menu';
+  const rect=btnEl.getBoundingClientRect();
+  menu.style.cssText=`position:fixed;top:${rect.bottom+4}px;right:${window.innerWidth-rect.right}px;`+
+    `background:var(--surface);border:1.5px solid var(--border);border-radius:10px;`+
+    `box-shadow:0 8px 28px rgba(0,0,0,.22);z-index:2000;min-width:170px;overflow:hidden;direction:rtl`;
+  const btnStyle='display:block;width:100%;text-align:right;padding:10px 14px;background:none;border:none;'+
+    'font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;color:var(--fg)';
+  menu.innerHTML=
+    `<button style="${btnStyle}" onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='none'"
+       onclick="snapDoPrint(${snapId},'${type}');this.closest('.snap-print-menu').remove()">🖨 הדפסה ישירה</button>`+
+    `<div style="height:1px;background:var(--border)"></div>`+
+    `<button style="${btnStyle}" onmouseover="this.style.background='var(--g100)'" onmouseout="this.style.background='none'"
+       onclick="snapDoPDF(${snapId},'${type}');this.closest('.snap-print-menu').remove()">📄 הורד PDF</button>`;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',function h(e){
+    if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',h);}
+  },true),0);
+}
+function snapDoPrint(snapId,type){
+  const s=_allSnapsFlat.find(x=>x.id===snapId)||{};
+  if(type==='summary') printSummary(s.records||[],s.name||'',s.date);
+  else printByCity(s.records||[],s.name||'',s.date);
+}
+async function snapDoPDF(snapId,type){
+  const s=_allSnapsFlat.find(x=>x.id===snapId)||{};
+  const recs=s.records||[];
+  if(!recs.length){showAlert('warning','אין נתונים','');return;}
+  // טען jsPDF
+  if(!window.jspdf){
+    await new Promise((res,rej)=>{const sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
+  }
+  if(typeof window.jspdf?.jsPDF?.prototype.autoTable==='undefined'){
+    await new Promise((res,rej)=>{const sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+      sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
+  }
+  const {jsPDF}=window.jspdf;
+  if(type==='summary'){
+    // PDF סיכום: עיר → ספירה
+    const cityMap={};
+    recs.forEach(r=>{const c=cityLabel(r[CITY_KEY])||'(לא ידוע)';cityMap[c]=(cityMap[c]||0)+1;});
+    const rows=Object.entries(cityMap).sort((a,b)=>b[1]-a[1]);
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    doc.autoTable({
+      head:[[s.name||'סיכום',recs.length+' נרשמו']],
+      body:rows,
+      styles:{font:'helvetica',fontSize:11,halign:'right'},
+      headStyles:{fillColor:[22,47,89],textColor:255,fontSize:12,halign:'right'},
+      alternateRowStyles:{fillColor:[240,244,252]},
+      columnStyles:{1:{halign:'center',fontStyle:'bold'}},
+      margin:{right:15,left:15,top:15}
+    });
+    doc.save(`סיכום_${(s.name||'').replace(/\s/g,'_')}.pdf`);
+  } else {
+    // PDF לפי ערים: שם · שיעור · טלפון
+    const cityMap={};
+    recs.forEach(r=>{
+      const c=cityLabel(r[CITY_KEY])||'(לא ידוע)';
+      if(!cityMap[c])cityMap[c]=[];
+      const pv=parseValName(r['ValName']??'');
+      cityMap[c].push([pv.last+' '+pv.first,pv.shiur,r['Phone']||r['Folder']||'']);
+    });
+    const he={sensitivity:'base'};
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    let first=true;
+    Object.entries(cityMap).sort((a,b)=>a[0].localeCompare(b[0],'he',he)).forEach(([city,rows])=>{
+      if(!first){doc.addPage();}first=false;
+      rows.sort((a,b)=>a[0].localeCompare(b[0],'he',he));
+      doc.autoTable({
+        head:[[{content:`${city} — ${rows.length} בחורים`,colSpan:3,styles:{halign:'right',fontStyle:'bold',fillColor:[22,47,89],textColor:255,fontSize:12}}],
+              ['שם','שיעור','טלפון']],
+        body:rows,
+        styles:{font:'helvetica',fontSize:10,halign:'right'},
+        headStyles:{fillColor:[22,47,89],textColor:255,halign:'right'},
+        alternateRowStyles:{fillColor:[240,244,252]},
+        columnStyles:{2:{halign:'left',font:'courier'}},
+        margin:{right:10,left:10,top:10}
+      });
+    });
+    doc.save(`לפי_ערים_${(s.name||'').replace(/\s/g,'_')}.pdf`);
   }
 }
 
