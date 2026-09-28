@@ -809,8 +809,8 @@ function renderDashboard(){
   const knownTotal=cities.reduce((s,[,n])=>s+n,0);
   const total=_records.length;
   // חישוב אוטובוסים לפי ערים (לא גלובלי)
-  const fullBusTotal=cities.reduce((s,[,n])=>s+Math.floor(n/55),0);
-  const remTotal=cities.reduce((s,[,n])=>s+(n%55),0);
+  const fullBusTotal=cities.reduce((s,[,n])=>s+Math.floor(n/50),0);
+  const remTotal=cities.reduce((s,[,n])=>s+(n%50),0);
   const busLabel=fullBusTotal>0?`<span class="meta-num">${fullBusTotal}</span><span class="meta-lbl"> אוטובוסים מלאים</span>`:'';
   const remLabel=remTotal>0?`${fullBusTotal>0?'<span class="meta-sep"> + </span>':''}<span class="meta-num">${remTotal}</span><span class="meta-lbl"> רשומים שלא מילאו אוטובוס</span>`:'';
   qs('dash-meta').innerHTML=`<span class="meta-num">${total.toLocaleString('he')}</span><span class="meta-lbl"> בחורים</span><span class="meta-sep"> · </span><span class="meta-num">${cities.length}</span><span class="meta-lbl"> ערים</span><span class="meta-sep"> · </span>${busLabel}${remLabel}`;
@@ -820,11 +820,11 @@ function renderDashboard(){
     <div class="city-name">כל הבחורים</div>
     ${unknownCount?`<div class="city-pct">${unknownCount.toLocaleString('he')} ללא עיר</div>`:''}
   </div>`;
-  const totalBuses=Math.ceil(knownTotal/55);
+  const totalBuses=Math.ceil(knownTotal/50);
   cities.forEach(([city,count],i)=>{
     const blocked=_blockedCities.has(city);
     const pct=Math.round(count/knownTotal*1000)/10,fw=Math.round(count/maxN*100);
-    const fullBuses=Math.floor(count/55),remainder=count%55;
+    const fullBuses=Math.floor(count/50),remainder=count%50;
     const busLine=remainder>0
       ?`<span style="font-weight:700">${fullBuses} אוטובוס${fullBuses!==1?'ים':''}</span> <span style="opacity:.6;font-size:11px">+ ${remainder} נוספים</span>`
       :`<span style="font-weight:700">${fullBuses} אוטובוס${fullBuses!==1?'ים':''}</span>`;
