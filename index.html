@@ -2242,7 +2242,10 @@ function toggleTheme(){
   if(!credsOK()){qs('cfg-warn').hidden=false;return}
   await checkVersion(); // שמירת SHA ראשוני
   await loadData();startTimer();
-  setInterval(checkVersion,60000);
+  setInterval(checkVersion,30000); // כל 30 שניות
+  // בדוק גם כשהטאב חוזר לפוקוס (אחרי שהיה ברקע)
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkVersion();});
+  window.addEventListener('focus',checkVersion);
   initServiceWorker(); // התראות רקע (אופציונלי)
   renderArchiveView(); // בדיקת גרסה עצמאית כל 60 שניות
 })();
@@ -2397,4 +2400,3 @@ function toggleTheme(){
 </footer>
 </body>
 </html>
-<!-- test Mon Sep 28 18:03:32 IDT 2026 -->
