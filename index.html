@@ -2833,11 +2833,8 @@ async function exportPDF(){
         <input id="add-id-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="9"
           placeholder="מספר ת.ז."
           style="flex:1;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:15px;text-align:center;letter-spacing:2px"
+          oninput="if(this.value.replace(/\D/g,'').length===9)verifyAddID()"
           onkeydown="if(event.key==='Enter')verifyAddID()">
-        <button onclick="verifyAddID()" id="add-verify-btn"
-          style="padding:10px 20px;border-radius:9px;border:none;background:var(--navy);color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">
-          אמת
-        </button>
       </div>
       <div id="add-step1-err" hidden style="margin-top:10px;color:#EF4444;font-size:13px;font-weight:600"></div>
     </div>
