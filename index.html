@@ -2256,7 +2256,7 @@ async function snapUpdateMeta(snapId,data){
       return false;
     }
     renderArchiveView();
-    renderAdminSnaps();
+    if(typeof renderAdminSnaps==='function')renderAdminSnaps();
     return true;
   }
   return false;
