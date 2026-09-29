@@ -1170,6 +1170,21 @@ function renderDrillTable(){
   if(_sortKeys.length){
     rows.sort((a,b)=>{
       for(const sk of _sortKeys){
+        // מיון לפי שעה — משלב תאריך+שעה לחותמת מספרית (24 שעות, מרובה ימים)
+        if(sk.col==='__time__'){
+          const dateTimeVal=r=>{
+            const d=String(r['Date']||'').trim();  // YYYY-MM-DD
+            const t=String(r['Time']||'').trim();  // HH:MM(:SS) or HH-MM(-SS)
+            if(!d&&!t)return 0;
+            const dp=d.split('-');
+            const tp=t.replace(/-/g,':').split(':');
+            if(dp.length<3)return 0;
+            return new Date(+dp[0],+dp[1]-1,+dp[2],+(tp[0]||0),+(tp[1]||0),+(tp[2]||0)).getTime();
+          };
+          const c=dateTimeVal(a)-dateTimeVal(b);
+          if(c!==0)return sk.asc?c:-c;
+          continue;
+        }
         const av=String(cellVal(a,sk.col)),bv=String(cellVal(b,sk.col));
         const c=av.localeCompare(bv,'he',{sensitivity:'base',numeric:true});
         if(c!==0)return sk.asc?c:-c;
