@@ -283,6 +283,9 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   .snap-header-btns button{height:34px!important;font-size:12px!important;padding:0 9px!important}
   /* ══ סרגל עליון — touch targets ══ */
   .bar-end .btn-refresh{min-height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center}
+  /* הסתר ⚙️ ונקודת סטטוס — לא נכנסים ברוחב מובייל */
+  #btn-admin{display:none!important}
+  #dot{display:none}
   /* ══ Toast — מלמעלה כדי לא לחפות על כפתור חזרה ══ */
   .toast{bottom:auto!important;top:12px}
   /* ══ iOS zoom fix — כל input חייב font-size≥16px ══ */
@@ -313,7 +316,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
         <button class="btn-refresh" onclick="manualRefresh()">🔄 רענן</button>
       </div>
     </div>
-    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button id="archive-tab-btn" class="btn-refresh" onclick="toggleArchive()" title="ארכיון רישומים">📂 ארכיון</button><button class="btn-refresh" onclick="openGlobalSearch()" title="חיפוש גלובלי">🔍</button><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button><button class="btn-refresh" onclick="openAdmin()" title="פאנל מנהל">⚙️</button></div>
+    <div class="bar-end"><span id="dot" class="dot gray"></span><span id="status-lbl">לא מחובר</span><button id="archive-tab-btn" class="btn-refresh" onclick="toggleArchive()" title="ארכיון רישומים">📂 ארכיון</button><button class="btn-refresh" onclick="openGlobalSearch()" title="חיפוש גלובלי">🔍</button><button class="btn-refresh" id="btn-theme" onclick="toggleTheme()" title="מצב יום/לילה">🌙</button><button id="btn-admin" class="btn-refresh" onclick="openAdmin()" title="פאנל מנהל">⚙️</button></div>
   </div>
 </header>
 
