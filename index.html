@@ -2855,7 +2855,8 @@ async function exportPDF(){
   });
   // ── קיצורי מקלדת ──
   document.addEventListener('keydown',e=>{
-    if((e.ctrlKey||e.metaKey)&&e.key==='f'&&qs('gs-overlay').hidden){
+    // e.code במקום e.key — עובד גם עם מקלדת עברית
+    if((e.ctrlKey||e.metaKey)&&e.code==='KeyF'&&qs('gs-overlay').hidden){
       e.preventDefault();openGlobalSearch();
     }
     if(e.key==='Escape'&&!qs('view-city').hidden&&qs('gs-overlay').hidden&&qs('admin-overlay').hidden&&!document.getElementById('snap-modal-overlay')){
