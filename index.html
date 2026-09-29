@@ -658,7 +658,7 @@ function buildColumns(records){
   if(!_columns.includes('__last__'))_columns.push('__last__');
   if(!_columns.includes('__first__'))_columns.push('__first__');
   if(!_columns.includes('__shiur__'))_columns.push('__shiur__');
-  if(keys.includes('Date')&&!_columns.includes('__time__'))_columns.push('__time__');
+  if(keys.includes('Time')&&!_columns.includes('__time__'))_columns.push('__time__');
   // הסר ValName — מוחלף ע"י __last__ ו-__first__
   _columns=_columns.filter(k=>k!=='ValName');
   _columns.sort((a,b)=>{const ai=prio.indexOf(a),bi=prio.indexOf(b);
@@ -693,7 +693,13 @@ function cellVal(rec,col){
   if(col==='__last__')return parseValName(rec['ValName']??'').last;
   if(col==='__first__')return parseValName(rec['ValName']??'').first;
   if(col==='__shiur__')return parseValName(rec['ValName']??'').shiur;
-  if(col==='__time__'){const d=parseYmTime(rec['Date']||'');return d?d.toLocaleTimeString('he',{hour:'2-digit',minute:'2-digit'}):''}
+  if(col==='__time__'){
+    // Time הוא שדה נפרד מ-Date בימות המשיח
+    const t=rec['Time']||'';
+    if(!t)return'';
+    // המרה מ-HH-MM-SS או HH:MM:SS ל-HH:MM
+    return t.replace(/[-:]/g,':').split(':').slice(0,2).join(':');
+  }
   return v;
 }
 
