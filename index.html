@@ -279,6 +279,23 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   .snap-actions>button,.snap-actions>div{width:100%!important}
   .snap-actions>div{display:flex!important;flex-direction:column!important;gap:5px!important}
   .snap-actions>div>button{width:100%!important;justify-content:center!important;height:36px!important;font-size:13px!important}
+  /* ══ snap header buttons — touch target ══ */
+  .snap-header-btns button{height:34px!important;font-size:12px!important;padding:0 9px!important}
+  /* ══ סרגל עליון — touch targets ══ */
+  .bar-end .btn-refresh{min-height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center}
+  /* ══ Toast — מלמעלה כדי לא לחפות על כפתור חזרה ══ */
+  .toast{bottom:auto!important;top:12px}
+  /* ══ iOS zoom fix — כל input חייב font-size≥16px ══ */
+  input,textarea,select{font-size:16px!important}
+  /* ══ חיפוש גלובלי — פחות padding בראש ══ */
+  #gs-overlay{padding:8px!important;align-items:flex-start}
+  #gs-overlay > div{max-height:calc(100svh - 16px);border-radius:14px}
+  /* ══ פאנל מנהל — padding קטן יותר ══ */
+  #admin-overlay > div{padding:18px 14px!important;border-radius:14px!important}
+  /* ══ מודאל הדפסה ══ */
+  #print-modal > div{padding:20px 16px!important;max-width:calc(100% - 32px)!important}
+  /* ══ nbhd grid — 2 עמודות אמיתיות ══ */
+  #nbhd-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important}
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';document.head.appendChild(s)"></script>
