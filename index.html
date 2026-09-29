@@ -2413,9 +2413,11 @@ async function snapSaveMeta(){
   });
   const notesSnapshot=[..._snapEditorNotes];
   snapCloseEditor(); // סוגר מיד — אופטימיסטי
+  showToast('שומר...','info',15000);
   const ok=await snapUpdateMeta(snapId,{notesList:notesSnapshot,actualBuses,returnBuses});
-  if(ok)showToast('נשמר בהצלחה','success',4000);
-  else showToast('שמירה נכשלה','error',5000);
+  console.log('[snapSaveMeta] snapId=',snapId,'ok=',ok,'periodsData=',_periodsData?.length);
+  if(ok)showToast('נשמר בהצלחה ✅','success',4000);
+  else showToast('שמירה נכשלה ❌','error',5000);
 }
 
 // רינדור כרטיס תמונת מצב אחת (משותף לארכיון ולפאנל מנהל)
