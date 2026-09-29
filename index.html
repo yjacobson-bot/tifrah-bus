@@ -914,7 +914,7 @@ function renderMiniPie(items,containerId){
     const col=COLORS[i%COLORS.length];
     const pct=Math.round(count/total*1000)/10;
     const tip=`${name} — ${count.toLocaleString('he')} (${pct}%)`;
-    paths+=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${large},1 ${x2},${y2} Z" fill="${col}" stroke="var(--surface)" stroke-width="2" style="cursor:pointer;transition:opacity .15s" onmouseenter="pieHover(this,'${uid}','${tip.replace(/'/g,'\\\'')}')" onmouseleave="pieOut(this,'${uid}')"/>`;
+    paths+=`<path d="M${cx},${cy} L${x1},${y1} A${R},${R} 0 ${large},1 ${x2},${y2} Z" fill="${col}" stroke="var(--surface)" stroke-width="1" style="cursor:pointer;transition:opacity .15s" onmouseenter="pieHover(this,'${uid}','${tip.replace(/'/g,'\\\'')}')" onmouseleave="pieOut(this,'${uid}')"/>`;
     legendHtml+=`<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:5px">
       <span style="width:11px;height:11px;border-radius:3px;background:${col};flex-shrink:0"></span>
       <span style="font-weight:600">${esc(name)}</span>
