@@ -2395,8 +2395,6 @@ function snapDeleteNote(idx){
 async function snapSaveMeta(){
   const snapId=_snapEditorId;if(!snapId)return;
   const modal=document.getElementById('snap-modal-overlay');
-  const saveBtn=document.getElementById('snap-modal-save-btn');
-  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ שומר…';}
   const actualBuses=[],returnBuses=[];
   modal?.querySelectorAll('input[data-type="out"]').forEach(inp=>{
     const v=parseInt(inp.value)||0;if(v>0)actualBuses.push({city:inp.dataset.city,buses:v});
@@ -2404,9 +2402,10 @@ async function snapSaveMeta(){
   modal?.querySelectorAll('input[data-type="ret"]').forEach(inp=>{
     const v=parseInt(inp.value)||0;if(v>0)returnBuses.push({city:inp.dataset.city,buses:v});
   });
-  const ok=await snapUpdateMeta(snapId,{notesList:_snapEditorNotes,actualBuses,returnBuses});
-  if(ok)snapCloseEditor();
-  else if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 שמור';}
+  const notesSnapshot=[..._snapEditorNotes];
+  snapCloseEditor(); // סוגר מיד — אופטימיסטי
+  const ok=await snapUpdateMeta(snapId,{notesList:notesSnapshot,actualBuses,returnBuses});
+  if(ok)showToast('✅ נשמר','success');
 }
 
 // רינדור כרטיס תמונת מצב אחת (משותף לארכיון ולפאנל מנהל)
