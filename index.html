@@ -879,7 +879,7 @@ async function loadData(){
       const cityStr=Object.entries(cityCounts).map(([c,n])=>n>1?`${n} ${c}`:c).join(', ');
       const title=diff===1?`נרשם חדש אחד!`:`נוספו ${diff} נרשמים חדשים!`;
       showAlert('success',title,`${cityStr} · סה"כ: ${_records.length.toLocaleString('he')}`);
-      try{const ac=new AudioContext();const o=ac.createOscillator();const g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.setValueAtTime(0.3,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.3);o.start();o.stop(ac.currentTime+0.3);}catch{}
+      try{const ac=new AudioContext();const o=ac.createOscillator();const g=ac.createGain();o.connect(g);g.connect(ac.destination);o.type='sine';o.frequency.setValueAtTime(880,ac.currentTime);o.frequency.setValueAtTime(1100,ac.currentTime+0.15);g.gain.setValueAtTime(0.7,ac.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.6);o.start();o.stop(ac.currentTime+0.6);}catch{}
     }
     _prevCount=_records.length;
     // רענון חכם — רק אם הנתונים השתנו
