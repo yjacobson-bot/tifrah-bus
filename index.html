@@ -1170,18 +1170,23 @@ function renderDrillTable(){
   if(_sortKeys.length){
     rows.sort((a,b)=>{
       for(const sk of _sortKeys){
-        // מיון לפי שעה — משלב תאריך+שעה לחותמת מספרית (24 שעות, מרובה ימים)
+        // מיון לפי שעה — חותמת מספרית מ-Date+Time, תומך בכל פורמט
         if(sk.col==='__time__'){
-          const dateTimeVal=r=>{
-            const d=String(r['Date']||'').trim();  // YYYY-MM-DD
-            const t=String(r['Time']||'').trim();  // HH:MM(:SS) or HH-MM(-SS)
-            if(!d&&!t)return 0;
-            const dp=d.split('-');
-            const tp=t.replace(/-/g,':').split(':');
-            if(dp.length<3)return 0;
-            return new Date(+dp[0],+dp[1]-1,+dp[2],+(tp[0]||0),+(tp[1]||0),+(tp[2]||0)).getTime();
+          const dtVal=r=>{
+            const d=String(r['Date']||'').trim();
+            const t=String(r['Time']||'').trim().replace(/-/g,':');
+            const tp=t.split(':');
+            const hh=+(tp[0]||0),mm=+(tp[1]||0),ss=+(tp[2]||0);
+            // YYYY-MM-DD
+            let m=d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if(m)return new Date(+m[1],+m[2]-1,+m[3],hh,mm,ss).getTime();
+            // DD/MM/YYYY
+            m=d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+            if(m)return new Date(+m[3],+m[2]-1,+m[1],hh,mm,ss).getTime();
+            // fallback: רק שעה (לאותו יום)
+            return hh*3600+mm*60+ss;
           };
-          const c=dateTimeVal(a)-dateTimeVal(b);
+          const c=dtVal(a)-dtVal(b);
           if(c!==0)return sk.asc?c:-c;
           continue;
         }
