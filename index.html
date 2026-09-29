@@ -448,9 +448,9 @@ async function initServiceWorker(){
 }
 
 let _token=null,_tokenAt=0,_records=[],_columns=[];
-// cache שמור רק כ-fallback לאי-חיבור — לא מוצג מיד
+// טען cache — מוצג רק אם זו פתיחה ראשונה (אין נתונים עדיין)
+let _cachedRecords=null;
 try{const c=localStorage.getItem('tifrah_records_cache');if(c){_cachedRecords=JSON.parse(c);}}catch{}
-let _cachedRecords=_cachedRecords||null;
 
 // שדות קבועים לפי ApprovalAll.ini
 const CITY_KEY='P050';
@@ -803,12 +803,14 @@ async function loadData(){
   if(!credsOK()){qs('cfg-warn').hidden=false;_loadingInProgress=false;return}
   clearAlert();
   loadExtStatus(); // בד"כ לא מחכים — נטען במקביל
-  // הצג ספינר רק אם אין נתונים כבר — לא מוחק תצוגה קיימת!
+  // הצג ספינר רק אם אין נתונים כלל — אחרת טען בשקט ברקע
   const _LOGO_SRC=document.querySelector('#top-bar img')?.src||'';
-  const _hasData=_records&&_records.length>0;
+  const _hasData=(_records&&_records.length>0)||(_cachedRecords&&_cachedRecords.length>0);
   if(!_hasData){
     qs('city-grid').innerHTML=`<div class="loading-wrap" style="grid-column:1/-1"><img class="loading-logo" src="${_LOGO_SRC}" alt=""><p class="loading-text">טוען נתונים…</p></div>`;
   } else {
+    // הצג cache בפתיחה ראשונה אם אין עדיין נתונים חיים
+    if(!_records.length&&_cachedRecords?.length){_records=_cachedRecords;renderDashboard();}
     setStatus('pulse','טוען…');
   }
   try{
