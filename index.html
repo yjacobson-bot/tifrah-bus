@@ -380,6 +380,10 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div class="search-row">
         <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="_debouncedFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
+        <div style="position:relative;flex-shrink:0">
+          <button id="col-picker-btn" class="btn-export" onclick="toggleColPicker()" title="בחר עמודות" style="background:var(--g50);border-color:var(--border);color:var(--text)">☰ עמודות</button>
+          <div id="col-picker-panel" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;z-index:500;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,.15)"></div>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%">
           <button id="export-btn" class="btn-export" onclick="exportExcel()" style="flex:1;min-width:100px">⬇ Excel</button>
 <button class="btn-export" onclick="printSummary(_drillFiltered||_records,'רישום נוכחי')" style="flex:1;min-width:100px;background:var(--g50);border-color:var(--border);color:var(--fg)">🖨 הדפסה</button>
@@ -478,6 +482,7 @@ async function initServiceWorker(){
 }
 
 let _token=null,_tokenAt=0,_records=[],_columns=[],_logoSrc='';
+let _hiddenCols=new Set(JSON.parse(localStorage.getItem('tifrah_hiddenCols')||'[]'));
 // טען cache — מוצג רק אם זו פתיחה ראשונה (אין נתונים עדיין)
 let _cachedRecords=null;
 try{const c=localStorage.getItem('tifrah_records_cache');if(c){_cachedRecords=JSON.parse(c);}}catch{}
@@ -532,6 +537,7 @@ function colLabel(k){
   if(k==='__last__')return'משפחה';
   if(k==='__first__')return'שם פרטי';
   if(k==='__shiur__')return'שיעור';
+  if(k==='__time__')return'שעה';
   const m={'ValName':'שם','Phone':'טלפון','Folder':'טלפון','phone':'טלפון','Date':'תאריך',
     'EnterDate':'תאריך כניסה','ExitDate':'תאריך יציאה','Status':'סטטוס',
     'Booking':'מספר הזמנה','DID':'מספר חייג','IncomingDID':'DID','var':'משתנה',
@@ -645,13 +651,14 @@ function parseYMGR(text){
 function buildColumns(records){
   const keys=[...new Set(records.flatMap(r=>Object.keys(r)))];
   // עמודות מועדפות קודם
-  const prio=['__last__','__first__','__shiur__','Phone','Date',CITY_KEY,NBHD_KEY,'P052','Status','Booking'];
+  const prio=['__last__','__first__','__shiur__','Phone','Date','__time__',CITY_KEY,NBHD_KEY,'P052','Status','Booking'];
   const hidden=['_path','_period','DID','IncomingDID','var','IdType','Data','Folder','HebrewDate','Time','EnterId','IdType'];
   _columns=keys.filter(k=>!hidden.includes(k));
   // הוסף עמודות וירטואליות (לא קיימות ב-keys)
   if(!_columns.includes('__last__'))_columns.push('__last__');
   if(!_columns.includes('__first__'))_columns.push('__first__');
   if(!_columns.includes('__shiur__'))_columns.push('__shiur__');
+  if(keys.includes('Date')&&!_columns.includes('__time__'))_columns.push('__time__');
   // הסר ValName — מוחלף ע"י __last__ ו-__first__
   _columns=_columns.filter(k=>k!=='ValName');
   _columns.sort((a,b)=>{const ai=prio.indexOf(a),bi=prio.indexOf(b);
@@ -686,6 +693,7 @@ function cellVal(rec,col){
   if(col==='__last__')return parseValName(rec['ValName']??'').last;
   if(col==='__first__')return parseValName(rec['ValName']??'').first;
   if(col==='__shiur__')return parseValName(rec['ValName']??'').shiur;
+  if(col==='__time__'){const d=parseYmTime(rec['Date']||'');return d?d.toLocaleTimeString('he',{hour:'2-digit',minute:'2-digit'}):''}
   return v;
 }
 
@@ -1166,8 +1174,9 @@ function renderDrillTable(){
   const total=rows.length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
   _drillPage=Math.max(1,Math.min(_drillPage,pages));
   const start=(_drillPage-1)*PAGE_SIZE,pageRows=rows.slice(start,start+PAGE_SIZE);
+  const _visCols=_columns.filter(c=>!_hiddenCols.has(c));
   qs('drill-thead').innerHTML='<tr><th class="idx" style="width:36px">#</th>'+
-    _columns.map(c=>{
+    _visCols.map(c=>{
       const idx=_sortKeys.findIndex(sk=>sk.col===c);
       const active=idx>=0;
       const asc=active?_sortKeys[idx].asc:true;
@@ -1178,15 +1187,14 @@ function renderDrillTable(){
   renderSortBar();
   qs('drill-tbody').innerHTML=pageRows.length
     ?pageRows.map((r,i)=>{
-        const phone=r['Phone']||r['Folder']||'';
         const q=(qs('search-in').value||'').toLowerCase();
-        return`<tr><td class="idx" data-label="#">${start+i+1}</td>${_columns.map(c=>{
+        return`<tr><td class="idx" data-label="#">${start+i+1}</td>${_visCols.map(c=>{
           const v=cellVal(r,c);
           const cls=(c.toLowerCase().includes('phone')||c==='Folder')?'phone':'';
           return`<td class="${cls}" data-label="${esc(colLabel(c))}">${highlight(v,q)}</td>`;
         }).join('')}</tr>`;
       }).join('')
-    :`<tr><td colspan="${_columns.length+2}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
+    :`<tr><td colspan="${_visCols.length+2}" style="text-align:center;padding:30px;color:var(--muted)">אין תוצאות</td></tr>`;
   qs('list-info').textContent=`${total.toLocaleString('he')} בחורים`;
   qs('page-info').textContent=`עמוד ${_drillPage} / ${pages}`;
   const b=[`<button onclick="goPage(${_drillPage-1})" ${_drillPage<=1?'disabled':''}>›</button>`];
@@ -1704,6 +1712,37 @@ async function adminAdvanceApprovalNumberConfirm(){
     adminMsg(`✅ המספר עודכן ל-${val} בהצלחה!`,'#166534');
   }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');}
 }
+
+function toggleColPicker(){
+  const p=document.getElementById('col-picker-panel');
+  if(!p)return;
+  const open=p.style.display==='block';
+  if(!open){renderColPicker();p.style.display='block';}
+  else p.style.display='none';
+}
+function renderColPicker(){
+  const p=document.getElementById('col-picker-panel');
+  if(!p)return;
+  p.innerHTML=_columns.map(c=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:13px">
+      <input type="checkbox" ${_hiddenCols.has(c)?'':'checked'} onchange="toggleCol('${c.replace(/'/g,"\\'")}')"
+        style="width:15px;height:15px;accent-color:var(--accent)">
+      ${esc(colLabel(c))}
+    </label>`).join('');
+}
+function toggleCol(k){
+  if(_hiddenCols.has(k))_hiddenCols.delete(k);
+  else _hiddenCols.add(k);
+  try{localStorage.setItem('tifrah_hiddenCols',JSON.stringify([..._hiddenCols]));}catch(_){}
+  renderDrillTable();
+  renderColPicker();
+}
+// סגור picker בלחיצה מחוץ לו
+document.addEventListener('click',e=>{
+  const panel=document.getElementById('col-picker-panel');
+  const btn=document.getElementById('col-picker-btn');
+  if(panel&&btn&&!panel.contains(e.target)&&!btn.contains(e.target))panel.style.display='none';
+});
 
 function adminMsg(msg,color){
   try{
