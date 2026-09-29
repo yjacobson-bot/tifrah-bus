@@ -498,10 +498,12 @@ async function ensureToken(){
   setStatus('pulse','מתחבר…');
   let text;
   try{
-    const res=await fetch(`${API}Login?username=${encodeURIComponent(CONFIG.sysNum)}&password=${encodeURIComponent(CONFIG.password)}`);
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),10000);
+    const res=await fetch(`${API}Login?username=${encodeURIComponent(CONFIG.sysNum)}&password=${encodeURIComponent(CONFIG.password)}`,{signal:ctrl.signal});
+    clearTimeout(tid);
     text=await res.text();
   }catch(e){
-    const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (8 שנ\')':('שגיאת רשת: '+e.message);
+    const msg=e.name==='AbortError'?'פג זמן ההמתנה לשרת (10 שנ\')':('שגיאת רשת: '+e.message);
     throw new Error(msg);
   }
   let tok=null;
@@ -2235,8 +2237,15 @@ async function snapUpdateMeta(snapId,data){
       const tok=await ensureToken();
       const form=new FormData();
       form.append('file',new Blob([JSON.stringify(pd.snaps)],{type:'application/json'}),`period_${pd.period.id}.json`);
-      await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${ARCHIVE_FOLDER()}/period_${pd.period.id}.json`,{method:'POST',body:form});
-    }catch(e){console.error('snapUpdateMeta save error',e);}
+      const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),15000);
+      await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${ARCHIVE_FOLDER()}/period_${pd.period.id}.json`,{method:'POST',body:form,signal:ctrl.signal});
+      clearTimeout(tid);
+    }catch(e){
+      const msg=e.name==='AbortError'?'פג זמן ההמתנה בשמירה':e.message;
+      console.error('snapUpdateMeta save error',msg);
+      showToast('❌ שגיאה בשמירה: '+msg,'error');
+      return false;
+    }
     renderArchiveView();
     renderAdminSnaps();
     return true;
