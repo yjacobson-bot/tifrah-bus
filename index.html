@@ -2585,7 +2585,8 @@ function gsMatchRec(r,ql){
   return(pv.last+' '+pv.first).toLowerCase().includes(ql)||
     phoneMatch||
     pv.shiur.toLowerCase().includes(ql)||
-    cityLabel(r[CITY_KEY]||'').toLowerCase().includes(ql);
+    cityLabel(r[CITY_KEY]||'').toLowerCase().includes(ql)||
+    nbhdLabel(r[NBHD_KEY]||'').toLowerCase().includes(ql);
 }
 function gsSearch(){
   const q=(qs('gs-input').value||'').trim();
