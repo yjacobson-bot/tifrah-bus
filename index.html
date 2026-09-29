@@ -1646,6 +1646,65 @@ function renderAdminCities(){
   }).join('');
 }
 
+async function adminAdvanceApprovalNumber(){
+  const btn=document.getElementById('btn-advance-approval');
+  const conf=document.getElementById('advance-approval-confirm');
+  if(btn)btn.disabled=true;
+  adminMsg('⏳ קורא מספר נוכחי…','#92400E');
+  try{
+    const tok=await ensureToken();
+    if(!tok){adminMsg('שגיאה: אין חיבור לשלוחה','#991B1B');if(btn)btn.disabled=false;return;}
+    const path=`ivr2:${CONFIG.folder}/ApprovalNumberNow.ini`;
+    const r=await fetch(`${API}DownloadFile?token=${tok}&path=${encodeURIComponent(path)}`);
+    if(!r.ok){adminMsg('שגיאה בקריאת ApprovalNumberNow.ini','#991B1B');if(btn)btn.disabled=false;return;}
+    const txt=await r.text();
+    if(!txt||!txt.trim()){adminMsg('הקובץ ApprovalNumberNow.ini ריק','#991B1B');if(btn)btn.disabled=false;return;}
+    // מצא שורה עם ערך מספרי
+    const lines=txt.split(/\r?\n/);
+    let found=-1,foundIdx=-1;
+    for(let i=0;i<lines.length;i++){
+      const m=lines[i].match(/^([^=]+)=(\d+)\s*$/);
+      if(m){found=parseInt(m[2],10);foundIdx=i;break;}
+    }
+    if(found<0){adminMsg('לא נמצא מספר ב-ApprovalNumberNow.ini','#991B1B');if(btn)btn.disabled=false;return;}
+    const nextThousand=Math.ceil((found+1)/1000)*1000;
+    // הצג אישור
+    document.getElementById('advance-cur-num').textContent=found;
+    document.getElementById('advance-new-num').textContent=nextThousand;
+    conf.hidden=false;
+    if(btn)btn.hidden=true;
+    adminMsg(`מספר נוכחי: ${found} → יעבור ל-${nextThousand}. אשר כדי להמשיך.`,'#92400E');
+    // שמור נתונים לאישור
+    conf.dataset.lines=JSON.stringify(lines);
+    conf.dataset.idx=foundIdx;
+    conf.dataset.val=nextThousand;
+  }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');if(btn)btn.disabled=false;}
+}
+async function adminAdvanceApprovalNumberConfirm(){
+  const conf=document.getElementById('advance-approval-confirm');
+  const btn=document.getElementById('btn-advance-approval');
+  const lines=JSON.parse(conf.dataset.lines||'[]');
+  const idx=parseInt(conf.dataset.idx||'0',10);
+  const val=parseInt(conf.dataset.val||'0',10);
+  if(!lines.length||!val){adminMsg('שגיאת נתונים','#991B1B');return;}
+  // עדכן את השורה
+  lines[idx]=lines[idx].replace(/=\d+/,'='+val);
+  const newTxt=lines.join('\n');
+  adminMsg('⏳ מעלה…','#92400E');
+  try{
+    const tok=await ensureToken();
+    const path=`ivr2:${CONFIG.folder}/ApprovalNumberNow.ini`;
+    const form=new FormData();
+    form.append('file',new Blob([newTxt],{type:'text/plain;charset=utf-8'}),'ApprovalNumberNow.ini');
+    const up=await fetch(`${API}UploadFile?token=${tok}&path=${encodeURIComponent(path)}`,{method:'POST',body:form});
+    const t=await up.text();
+    if(!up.ok||t.includes('"responseStatus":"ERROR"')){adminMsg('שגיאה בשמירה: '+t.slice(0,80),'#991B1B');return;}
+    conf.hidden=true;
+    btn.hidden=false;btn.disabled=false;
+    adminMsg(`✅ המספר עודכן ל-${val} בהצלחה!`,'#166534');
+  }catch(e){adminMsg('שגיאה: '+e.message,'#991B1B');}
+}
+
 function adminMsg(msg,color){
   try{
     const el=qs('admin-status');
@@ -2951,6 +3010,20 @@ async function exportPDF(){
           </div>
         </div>
         <button onclick="qs('admin-reset-confirm').hidden=false" style="width:100%;height:38px;background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">מחק ללא שמירה</button>
+      </div>
+
+      <!-- מספר רישום -->
+      <div style="border:1.5px solid #BFDBFE;border-radius:12px;padding:16px;margin-bottom:16px;background:#EFF6FF">
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:#1E40AF">🔢 מספר רישום</div>
+        <p style="font-size:13px;color:#1E40AF;margin:0 0 10px;opacity:.85">מקדם את מונה הרישום לאלף הבא (למשל 3304 → 4000). משמש לתחילת עונת רישום חדשה.</p>
+        <div id="advance-approval-confirm" hidden style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:#92400E">
+          <strong>⚠️ המשך?</strong> המספר יקפוץ מ-<strong id="advance-cur-num"></strong> ל-<strong id="advance-new-num"></strong>.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="adminAdvanceApprovalNumberConfirm()" style="flex:1;height:34px;background:#1E40AF;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">✅ כן, עדכן</button>
+            <button onclick="document.getElementById('advance-approval-confirm').hidden=true;document.getElementById('btn-advance-approval').hidden=false;document.getElementById('btn-advance-approval').disabled=false" style="flex:1;height:34px;background:var(--g100);border:1px solid var(--border);border-radius:7px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
+          </div>
+        </div>
+        <button id="btn-advance-approval" onclick="adminAdvanceApprovalNumber()" style="width:100%;height:38px;background:#1E40AF;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">קדם לאלף הבא ▶</button>
       </div>
 
       <!-- הגבלת זמן -->
