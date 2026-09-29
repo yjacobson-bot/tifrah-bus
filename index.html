@@ -415,8 +415,9 @@ async function checkVersion(){
   try{
     // ניסיון 1: GitHub API — SHA קומיט אמין
     const ghUrl=`https://api.github.com/repos/${GH_REPO}/commits/main`;
-    const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),5000);
+    const ctrl=new AbortController();const cvTid=setTimeout(()=>ctrl.abort(),5000);
     const r=await fetch(ghUrl,{cache:'no-store',signal:ctrl.signal,headers:{Accept:'application/vnd.github.v3+json'}});
+    clearTimeout(cvTid);
     if(r.ok){
       const j=await r.json();
       const sha=(j.sha||'').slice(0,10);
@@ -553,8 +554,9 @@ async function downloadFile(path,timeoutMs=15000){
 async function getDir(path){
   const tok=await ensureToken();
   try{
-    const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),8000);
-    return parseDirText(await(await fetch(`${API}GetIVR2Dir?token=${tok}&path=ivr2:${path}`,{signal:ctrl.signal})).text())
+    const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),8000);
+    const text=await(await fetch(`${API}GetIVR2Dir?token=${tok}&path=ivr2:${path}`,{signal:ctrl.signal})).text();
+    clearTimeout(tid);return parseDirText(text)
   }catch{return{folders:[],files:[]}}
 }
 function parseDirText(text){
@@ -831,9 +833,6 @@ async function loadData(){
     const approvalPath=`${folder}/ApprovalAll.ymgr`;
     const approvalText=await downloadFile(approvalPath,12000);
     if(approvalText&&approvalText.trim().length>5&&!approvalText.trim().startsWith('<')){
-      const firstLines=approvalText.split('\n').slice(0,5).join('\n');
-      console.log('ApprovalAll.ymgr raw:\n'+firstLines);
-      window._rawSample=firstLines; // שמור לתצוגה
       const recs=parseApprovalAll(approvalText);
       if(recs.length){recs.forEach(r=>{r._path=approvalPath});found.push(...recs)}
     }
@@ -868,9 +867,6 @@ async function loadData(){
       setStatus('ok','מעודכן');
       return;
     }
-    const sample=found[0]||{};
-    const sampleKeys=Object.keys(sample);
-    console.log('שדות דגימה:',sampleKeys,'ערך ראשון:',JSON.stringify(sample));
     // ApprovalAll.ymgr — כל רשומה כבר ייחודית (אחת לנרשם); רק ב-Log נייחד לפי טלפון
     const isApproval=found[0]?._path?.toLowerCase().includes('approvalall');
     if(isApproval){
@@ -1006,8 +1002,6 @@ function drillCity(raw){
   qs('drill-title').textContent=city;
   qs('drill-count').textContent=`${cityRecs.length.toLocaleString('he')} בחורים`;
   const allNbhds=getNbhdCounts(cityRecs);
-  console.log('שכונות ל'+city+':', JSON.stringify(allNbhds));
-  console.log('דוגמת P051:', cityRecs.slice(0,5).map(r=>r['P051']));
   const nbhds=allNbhds.filter(([n])=>n!=='(לא ידוע)');
   if(nbhds.length>0){
     qs('nbhd-meta').textContent=`${nbhds.length} שכונות · ${cityRecs.length.toLocaleString('he')} בחורים`;
@@ -1323,7 +1317,6 @@ async function adminDoReset(){
     const params=ymgrFiles.map((f,i)=>`what${i}=${encodeURIComponent('ivr2:'+CONFIG.folder+'/'+f)}`).join('&');
     const r=await fetch(`${API}FileAction?token=${tok}&action=delete&${params}`);
     const t=await r.text();
-    console.log('FileAction delete:',t);
     const ok=t.includes('"success":true')||t.includes('responsetype=OK');
     if(ok){
       adminMsg('✅ הרישום אופס! נתונים חדשים יופיעו כשמישהו יירשם.','#166534');
@@ -1391,8 +1384,9 @@ async function adminUpdateExtIni(newVal){
   try{
     // שלב 1: הורדה
     adminMsg('⏳ שלב 1/2: מוריד ext.ini…','#92400E');
-    const ac1=new AbortController();setTimeout(()=>ac1.abort(),12000);
+    const ac1=new AbortController();const tid1=setTimeout(()=>ac1.abort(),12000);
     const r=await fetch(`${API}DownloadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{signal:ac1.signal});
+    clearTimeout(tid1);
     if(!r.ok){adminMsg(`שגיאה בהורדה: HTTP ${r.status}`,'#991B1B');return}
     let txt=await r.text();
     if(!txt||txt.trim()===''){adminMsg('הקובץ ext.ini ריק או לא נמצא','#991B1B');return}
@@ -1425,12 +1419,13 @@ async function adminUpdateExtIni(newVal){
 
     // שלב 3: העלאה
     adminMsg('⏳ שלב 2/2: מעלה ext.ini…','#92400E');
-    const ac2=new AbortController();setTimeout(()=>ac2.abort(),12000);
+    const ac2=new AbortController();const tid2=setTimeout(()=>ac2.abort(),12000);
     const form=new FormData();
     form.append('file',new Blob([txt],{type:'text/plain;charset=utf-8'}),'ext.ini');
     const up=await fetch(`${API}UploadFile?token=${tok}&path=ivr2:${CONFIG.folder}/ext.ini`,{
       method:'POST',body:form,signal:ac2.signal
     });
+    clearTimeout(tid2);
     const upTxt=await up.text();
     if(upTxt.includes('responsetype=OK')||upTxt.toLowerCase().includes('ok')){
       adminMsg(newVal?`✅ מגבלה הוגדרת: ${newVal}`:'✅ המגבלה הוסרה','#166534');
@@ -2097,7 +2092,6 @@ async function archMigrateIfNeeded(){
     _periodCache[pid]=oldSnaps;
     await archPushIndex();
     await archPushPeriod(pid,oldSnaps);
-    console.log('archive.json הועבר בהצלחה לתיקייה החדשה');
   }catch(e){console.warn('archMigrateIfNeeded error',e);}
 }
 
@@ -2436,7 +2430,6 @@ async function snapSaveMeta(){
   snapCloseEditor(); // סוגר מיד — אופטימיסטי
   showToast('שומר...','info',15000);
   const ok=await snapUpdateMeta(snapId,{notesList:notesSnapshot,actualBuses,returnBuses});
-  console.log('[snapSaveMeta] snapId=',snapId,'ok=',ok,'periodsData=',_periodsData?.length);
   if(ok)showToast('נשמר בהצלחה ✅','success',4000);
   else showToast('שמירה נכשלה ❌','error',5000);
 }
