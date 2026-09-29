@@ -344,7 +344,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
     <div id="dash-content">
     <div id="dash-split-note"><img id="dash-split-logo" src="" alt=""><span>🔄 הנתונים יעודכנו מייד כשהרישום יפתח</span></div>
     <div class="section">
-      <div class="section-head"><span class="section-title">סיכום לפי ערים</span><span id="dash-meta" class="section-meta"></span></div>
+      <div class="section-head"><span class="section-title">סיכום לפי ערים</span><div style="display:flex;align-items:center;gap:8px"><button onclick="copySummary()" title="העתק פילוח ללוח" style="background:none;border:1.5px solid var(--border);border-radius:8px;padding:3px 10px;font-size:14px;cursor:pointer;color:var(--muted);line-height:1.4">📋</button><span id="dash-meta" class="section-meta"></span></div></div>
       <div id="city-grid"><div class="empty"><div class="ico">🏙️</div><p>טוען נתונים…</p></div></div>
     </div>
     <div class="section" id="pie-section" hidden>
@@ -375,7 +375,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
     <div class="section">
       <div class="section-head"><span class="section-title">רשימת בחורים</span></div>
       <div class="search-row">
-        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="applyDrillFilter()"></div>
+        <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="search-in" placeholder="חיפוש…" oninput="_debouncedFilter()"></div>
         <span id="list-info" class="tbl-info"></span>
         <div style="display:flex;gap:6px;flex-wrap:wrap;width:100%">
           <button id="export-btn" class="btn-export" onclick="exportExcel()" style="flex:1;min-width:100px">⬇ Excel</button>
@@ -1010,9 +1010,10 @@ function renderDashboard(){
   renderPieChart(cities);
 }
 
-function drillCity(raw){
+function drillCity(raw,push=true){
   const city=raw.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');
   _activeCity=city;_activeNbhd=null;_activeRamot=null;_drillPage=1;_sortKeys=[];
+  if(push)history.pushState({city},'','?city='+encodeURIComponent(city));
   qs('ramot-section').hidden=true;
   qs('search-in').value='';
   const cityRecs=_records.filter(r=>cityLabel(r[CITY_KEY])===city);
@@ -1208,8 +1209,9 @@ function sortDrill(e,col){
   }
   renderDrillTable();
 }
-function drillAll(){
+function drillAll(push=true){
   _activeCity='__all__';_activeNbhd=null;_activeRamot=null;_drillPage=1;_sortKeys=[];
+  if(push)history.pushState({city:'__all__'},'','?city=__all__');
   qs('search-in').value='';
   qs('drill-title').textContent='כל הבחורים';
   qs('drill-count').textContent=`${_records.length.toLocaleString('he')} בחורים`;
@@ -1218,7 +1220,38 @@ function drillAll(){
   qs('view-dashboard').hidden=true;qs('view-city').hidden=false;
   _drillFiltered=_records;renderDrillTable();updateExportBtn();
 }
-function backToDash(){_activeCity=null;_activeNbhd=null;qs('view-city').hidden=true;qs('view-dashboard').hidden=false}
+function backToDash(push=true){_activeCity=null;_activeNbhd=null;qs('view-city').hidden=true;qs('view-dashboard').hidden=false;if(push)history.pushState({},'',location.pathname)}
+
+// ── Debounce לחיפוש ──
+let _searchDebounce=null;
+function _debouncedFilter(){clearTimeout(_searchDebounce);_searchDebounce=setTimeout(applyDrillFilter,150);}
+
+// ── העתקת פילוח ──
+function copySummary(){
+  if(!_records.length){showToast('אין נתונים להעתקה','warning',3000);return}
+  const cities=getCityCounts(_records).filter(([c])=>c!=='(לא ידוע)');
+  const total=_records.length;
+  const lines=[`סה"כ ${total.toLocaleString('he')}`,''];
+  for(const [city,count] of cities){
+    lines.push(`${city} ${count}`);
+    const cityRecs=_records.filter(r=>cityLabel(r[CITY_KEY])===city);
+    const nbhds=getNbhdCounts(cityRecs).filter(([n])=>n!=='(לא ידוע)');
+    if(nbhds.length>1){
+      for(const [nbhd,nc] of nbhds){
+        lines.push(`  ${nbhd} ${nc}`);
+        if(nbhd==='רמות'){
+          const ramotRecs=cityRecs.filter(r=>nbhdLabel(r[NBHD_KEY])==='רמות');
+          const ramots=getRamotCounts(ramotRecs).filter(([n])=>n!=='(לא ידוע)');
+          for(const [rn,rc] of ramots)lines.push(`    ${rn} ${rc}`);
+        }
+      }
+    }
+  }
+  const text=lines.join('\n');
+  navigator.clipboard.writeText(text)
+    .then(()=>showToast('פילוח הועתק ✅','success',3000))
+    .catch(()=>fbCopy(text));
+}
 
 function exportCSV(){
   const e2=v=>'"'+String(v).replace(/"/g,'""')+'"';
@@ -1254,8 +1287,8 @@ function saveState(){
 }
 async function restoreState(s){
   if(!s||!s.city)return;
-  if(s.city==='__all__'){drillAll();}
-  else{drillCity(s.city);}
+  if(s.city==='__all__'){drillAll(false);}
+  else{drillCity(s.city,false);}
   if(s.nbhd){filterNbhd(s.nbhd);}
   if(s.ramot){filterRamot(s.ramot);}
   if(s.q&&qs('search-in')){qs('search-in').value=s.q;}
@@ -2807,6 +2840,28 @@ async function exportPDF(){
   setInterval(checkVersion,60000); // כל דקה (GitHub rate limit: 60/hour)
   initServiceWorker(); // התראות רקע (אופציונלי)
   renderArchiveView(); // בדיקת גרסה עצמאית כל 60 שניות
+  // שחזור עיר מ-URL
+  const _initCity=new URLSearchParams(location.search).get('city');
+  if(_initCity&&_records.length){
+    if(_initCity==='__all__')drillAll(false);
+    else drillCity(_initCity,false);
+    history.replaceState({city:_initCity},'',location.href);
+  }
+  // ── ניווט דפדפן (כפתור חזרה) ──
+  window.addEventListener('popstate',e=>{
+    if(e.state?.city==='__all__')drillAll(false);
+    else if(e.state?.city)drillCity(e.state.city,false);
+    else backToDash(false);
+  });
+  // ── קיצורי מקלדת ──
+  document.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='f'&&qs('gs-overlay').hidden){
+      e.preventDefault();openGlobalSearch();
+    }
+    if(e.key==='Escape'&&!qs('view-city').hidden&&qs('gs-overlay').hidden&&qs('admin-overlay').hidden&&!document.getElementById('snap-modal-overlay')){
+      backToDash();
+    }
+  });
 })();
 </script>
 <!-- ═══════════ ADMIN MODAL ═══════════ -->
