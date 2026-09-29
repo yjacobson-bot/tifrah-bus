@@ -2353,7 +2353,33 @@ async function adminCloseRegistration(){
   if(nameEl)nameEl.value='';
   adminMsg('⏳ מוחק קובץ רשומות…','#92400E');
   await adminDoReset();
-  adminMsg('✅ הרישום נסגר והועבר לארכיון. ניתן לעדכן אוטובוסים והערות בארכיון.','#166534');
+  // קדם את מספר הרישום לאלף הבא אוטומטית
+  try{
+    const tok2=await ensureToken();
+    if(tok2){
+      const approvalPath=`ivr2:${CONFIG.folder}/ApprovalNumberNow.ini`;
+      const ar=await fetch(`${API}DownloadFile?token=${tok2}&path=${encodeURIComponent(approvalPath)}`);
+      if(ar.ok){
+        const atxt=await ar.text();
+        const alines=atxt.split(/\r?\n/);
+        let advanced=false;
+        for(let i=0;i<alines.length;i++){
+          const m=alines[i].match(/^([^=]+)=(\d+)\s*$/);
+          if(m){
+            const next=Math.ceil((parseInt(m[2],10)+1)/1000)*1000;
+            alines[i]=m[1]+'='+next;
+            advanced=true;break;
+          }
+        }
+        if(advanced){
+          const af=new FormData();
+          af.append('file',new Blob([alines.join('\n')],{type:'text/plain;charset=utf-8'}),'ApprovalNumberNow.ini');
+          await fetch(`${API}UploadFile?token=${tok2}&path=${encodeURIComponent(approvalPath)}`,{method:'POST',body:af});
+        }
+      }
+    }
+  }catch(_){}
+  adminMsg('✅ הרישום נסגר והועבר לארכיון. מספר הרישום קודם לאלף הבא.','#166634');
 }
 
 // עדכון snapshot קיים (אוטובוסים + חזרה + הערות)
