@@ -53,7 +53,8 @@ code{background:rgba(0,0,0,.08);padding:1px 5px;border-radius:4px;font-size:12px
 #dash-meta .meta-num{color:var(--accent);font-weight:700}
 #dash-meta .meta-lbl{color:var(--fg)}
 #dash-meta .meta-sep{color:var(--muted);font-weight:400}
-#city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:130px;gap:10px;position:relative;min-height:200px}
+#city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:auto;gap:10px;position:relative;min-height:200px}
+.city-card{min-height:120px}
 .city-card{border-radius:12px;padding:12px 14px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;border:2px solid transparent;display:flex;flex-direction:column;justify-content:space-between}
 .city-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .city-card:active{transform:scale(.97)}
@@ -234,11 +235,19 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   .snap-collapsed-head{flex-wrap:wrap!important;gap:6px!important}
   .snap-collapsed-info{min-width:0!important;width:100%!important}
   /* ══ כרטיסי ערים ══ */
-  #city-grid{grid-template-columns:repeat(2,1fr);gap:8px}
-  #nbhd-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px}
-  .city-card{padding:12px 12px}
-  .city-count{font-size:24px}
-  .city-name{font-size:12px}
+  #city-grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:auto;gap:8px}
+  #nbhd-grid{grid-template-columns:repeat(2,1fr)!important;grid-auto-rows:auto!important;gap:8px}
+  .city-card{padding:12px 12px;min-height:100px}
+  .city-count{font-size:26px}
+  .city-name{font-size:13px}
+  .city-card-total{grid-column:1/-1;min-height:70px;flex-direction:row;align-items:center;gap:12px;padding:12px 16px}
+  .city-card-total .city-count{font-size:32px;margin-bottom:0}
+  .city-card-total .city-pct{font-size:12px}
+  /* ══ section header במובייל ══ */
+  .section-head{flex-direction:column;align-items:flex-start;gap:4px}
+  #dash-meta{font-size:12px;line-height:1.5;white-space:normal;word-break:break-word}
+  #dash-meta .meta-num{font-size:14px}
+  #dash-meta .meta-lbl{font-size:12px}
   /* ══ drill back button ══ */
   .btn-back{position:fixed;bottom:16px;right:16px;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.25);border-radius:24px;padding:10px 20px;font-size:15px;background:var(--brand);color:#fff;border-color:transparent}
   #drill-header{flex-direction:row-reverse;justify-content:flex-end}
