@@ -161,6 +161,32 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .sort-chip button:disabled{opacity:.3;cursor:default}
 .sort-clear{background:none;border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit}
 .sort-clear:hover{background:var(--g100)}
+/* ══════════ פריסת לוח מחוונים דו-עמודית (כשהשלוחה סגורה/ממתין) ══════════ */
+#dash-layout{display:flex;flex-direction:column;gap:12px}
+#dash-layout.cd-split{flex-direction:row-reverse;gap:0;align-items:stretch;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+#dash-layout.cd-split #ext-status-banner{flex:0 0 42%;max-width:340px;border-radius:0;border:none;border-left:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+#dash-layout.cd-split #dash-content{flex:1;min-width:0;padding:16px 14px}
+#dash-split-note{display:none;align-items:center;gap:8px;padding:8px 10px;background:var(--g50);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);margin-bottom:12px}
+#dash-layout.cd-split #dash-split-note{display:flex}
+#dash-split-logo{height:28px;width:28px;object-fit:contain;opacity:.5}
+@media(max-width:640px){
+  #dash-layout.cd-split{flex-direction:column}
+  #dash-layout.cd-split #ext-status-banner{flex:none;border-left:none;border-bottom:1px solid var(--border);max-width:none}
+}
+/* ══════════ מודל עריכת ארכיון ══════════ */
+.snap-modal-overlay{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.snap-modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.snap-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.snap-modal-body{padding:18px;display:flex;flex-direction:column;gap:16px;flex:1}
+.snap-modal-foot{padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+.snap-note-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 5px;border-radius:20px;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--g50);margin-bottom:6px;max-width:100%;word-break:break-word}
+.snap-note-del{background:none;border:none;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;opacity:.5;border-radius:4px;flex-shrink:0}
+.snap-note-del:hover{opacity:1;background:rgba(220,38,38,.12);color:#DC2626}
+.snap-note-type-badge{font-size:11px;padding:1px 6px;border-radius:10px;font-weight:700;white-space:nowrap}
+.note-type-general{background:#DBEAFE;color:#1E40AF}
+.note-type-bus{background:#D1FAE5;color:#065F46}
+.note-type-warn{background:#FEF3C7;color:#92400E}
+.note-type-ok{background:#F3F4F6;color:#374151}
 /* ══════════ הדגשת חיפוש ══════════ */
 mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
 :root[data-theme="dark"] mark,:root:not([data-theme="light"]) mark{background:#854D0E;color:#FEF9C3}
@@ -282,8 +308,10 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   </div>
 
   <div id="view-dashboard">
-    <div id="ext-status-banner" hidden style="padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px"></div>
+    <div id="dash-layout">
+    <div id="ext-status-banner" hidden style="background:var(--surface);border:1px solid var(--border);border-radius:12px"></div>
     <div id="dash-content">
+    <div id="dash-split-note"><img id="dash-split-logo" src="" alt=""><span>🔄 הנתונים יעודכנו מייד כשהרישום יפתח</span></div>
     <div class="section">
       <div class="section-head"><span class="section-title">סיכום לפי ערים</span><span id="dash-meta" class="section-meta"></span></div>
       <div id="city-grid"><div class="empty"><div class="ico">🏙️</div><p>טוען נתונים…</p></div></div>
@@ -293,6 +321,7 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
       <div id="pie-wrap" style="display:flex;align-items:center;gap:32px;flex-wrap:wrap"></div>
     </div>
     </div><!-- /dash-content -->
+    </div><!-- /dash-layout -->
   </div>
 
   <div id="view-city" hidden>
@@ -694,47 +723,55 @@ async function loadExtStatus(){
     _extStatusTarget=null;
 
     const dashContent=document.getElementById('dash-content');
-    const showBanner=(html,target)=>{
+    const dashLayout=document.getElementById('dash-layout');
+    const logoEl=document.querySelector('#top-bar img');
+    const showBanner=(html,target,split)=>{
       banner.innerHTML=html;
       banner.hidden=false;
-      if(dashContent)dashContent.hidden=false; // תמיד מציג נתונים
+      if(dashContent)dashContent.hidden=false;
+      if(dashLayout){
+        if(split){
+          dashLayout.classList.add('cd-split');
+          const splitLogo=document.getElementById('dash-split-logo');
+          if(splitLogo&&logoEl)splitLogo.src=logoEl.src;
+        } else {
+          dashLayout.classList.remove('cd-split');
+        }
+      }
       if(target){_extStatusTarget=target;_extStatusInterval=setInterval(_tickExtStatus,1000);}
     };
     const hideBanner=()=>{
       banner.hidden=true;
       if(dashContent)dashContent.hidden=false;
+      if(dashLayout)dashLayout.classList.remove('cd-split');
     };
 
     if(endTime&&now>endTime){
       const openIn=startTime&&startTime>now?fmtDiffSecs(startTime-now):null;
       const closedHtml=openIn
-        ?`<div class="cd-closed cd-banner-wrap">
-            <div class="cd-timer-col"><div id="ext-countdown">${openIn}</div></div>
-            <div class="cd-info-col">
-              <div style="font-size:15px;font-weight:800;color:var(--text)">🔒 השלוחה סגורה לרישום</div>
-              <div style="font-size:13px;color:var(--muted)">תיפתח בעוד:</div>
-              <div style="font-size:11px;color:var(--muted);opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
-            </div>
+        ?`<div class="cd-closed" style="width:100%;padding:24px 14px;text-align:center">
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px">🔒 השלוחה סגורה לרישום</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">תיפתח בעוד:</div>
+            <div id="ext-countdown">${openIn}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:12px;opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
           </div>`
-        :`<div class="cd-closed" style="text-align:center;padding:20px 16px">
+        :`<div class="cd-closed" style="width:100%;padding:24px 14px;text-align:center">
             <div style="font-size:15px;font-weight:800;color:var(--text)">🔒 השלוחה סגורה לרישום</div>
           </div>`;
-      showBanner(closedHtml, openIn&&startTime?{type:'closed',targetTime:startTime}:null);
+      showBanner(closedHtml, openIn&&startTime?{type:'closed',targetTime:startTime}:null, true);
     } else if(startTime&&now<startTime){
       const diff=fmtDiffSecs(startTime-now);
       const pendingHtml=diff
-        ?`<div class="cd-pending cd-banner-wrap">
-            <div class="cd-timer-col"><div id="ext-countdown">${diff}</div></div>
-            <div class="cd-info-col">
-              <div style="font-size:15px;font-weight:800;color:var(--text)">⏳ הרישום טרם נפתח</div>
-              <div style="font-size:13px;color:var(--muted)">יפתח בעוד:</div>
-              <div style="font-size:11px;color:var(--muted);opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
-            </div>
+        ?`<div class="cd-pending" style="width:100%;padding:24px 14px;text-align:center">
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:12px">⏳ הרישום טרם נפתח</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">יפתח בעוד:</div>
+            <div id="ext-countdown">${diff}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:12px;opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
           </div>`
-        :`<div class="cd-pending" style="text-align:center;padding:20px 16px">
+        :`<div class="cd-pending" style="width:100%;padding:24px 14px;text-align:center">
             <div style="font-size:15px;font-weight:800;color:var(--text)">⏳ הרישום טרם נפתח</div>
           </div>`;
-      showBanner(pendingHtml,{type:'pending',targetTime:startTime});
+      showBanner(pendingHtml,{type:'pending',targetTime:startTime},true);
     } else {
       hideBanner();
     }
@@ -2189,7 +2226,8 @@ async function snapUpdateMeta(snapId,data){
     if(!snap)continue;
     if('actualBuses' in data) snap.actualBuses=data.actualBuses;
     if('returnBuses' in data) snap.returnBuses=data.returnBuses;
-    if('notes' in data) snap.notes=data.notes;
+    if('notesList' in data){snap.notesList=data.notesList;snap.notes=data.notesList.map(n=>n.text).join(' | ');}
+    else if('notes' in data) snap.notes=data.notes;
     snap.totalActualBuses=(snap.actualBuses||[]).reduce((s,x)=>s+(x.buses||0),0);
     snap.totalReturnBuses=(snap.returnBuses||[]).reduce((s,x)=>s+(x.buses||0),0);
     _allSnapsFlat=_periodsData.flatMap(pd=>pd.snaps).filter((s,i,a)=>a.findIndex(x=>x.id===s.id)===i);
@@ -2206,66 +2244,160 @@ async function snapUpdateMeta(snapId,data){
   return false;
 }
 
-// פתיחת עורך snapshot
-function snapOpenEditor(snapId){
-  const el=document.getElementById(`snap-editor-${snapId}`);
-  if(!el)return;
-  el.hidden=!el.hidden;
-  if(!el.hidden) snapBuildEditor(snapId);
+// סוגי הערות
+const SNAP_NOTE_TYPES=[
+  {id:'general',label:'כללי',emoji:'📝',cls:'note-type-general'},
+  {id:'bus',label:'אוטובוסים',emoji:'🚌',cls:'note-type-bus'},
+  {id:'warn',label:'חריג',emoji:'⚠️',cls:'note-type-warn'},
+  {id:'ok',label:'תקין',emoji:'✅',cls:'note-type-ok'},
+];
+// מיגרציה: notes מחרוזת → מערך
+function snapNormNotes(snap){
+  if(!snap.notesList){
+    if(snap.notes&&typeof snap.notes==='string'&&snap.notes.trim()){
+      snap.notesList=[{id:Date.now(),type:'general',text:snap.notes.trim()}];
+    } else {
+      snap.notesList=[];
+    }
+  }
+  return snap.notesList;
 }
 
-// בנייה של תוכן עורך
-function snapBuildEditor(snapId){
+// מצב עורך פתוח
+let _snapEditorId=null;
+let _snapEditorNotes=[];
+
+function snapOpenEditor(snapId){
   const snap=_allSnapsFlat.find(s=>s.id===snapId);
   if(!snap)return;
-  const el=document.getElementById(`snap-editor-${snapId}`);
-  if(!el)return;
+  _snapEditorId=snapId;
+  _snapEditorNotes=snapNormNotes(snap).map(n=>({...n}));
+  // הסר מודל קיים
+  document.getElementById('snap-modal-overlay')?.remove();
+  const d=new Date(snap.date);
+  const dateStr=d.toLocaleDateString('he',{day:'numeric',month:'long',year:'numeric'});
   const actualMap=Object.fromEntries((snap.actualBuses||[]).map(x=>[x.city,x.buses]));
   const returnMap=Object.fromEntries((snap.returnBuses||[]).map(x=>[x.city,x.buses]));
   const cityRows=snap.cities.map(([city,reg])=>`<tr>
-    <td style="padding:5px 8px;font-weight:600;font-size:13px">${esc(city)}<span style="font-weight:400;color:var(--muted);font-size:11px"> (${reg})</span></td>
-    <td style="padding:5px 4px">
+    <td style="padding:5px 8px;font-weight:600;font-size:13px;direction:rtl">${esc(city)}<span style="font-weight:400;color:var(--muted);font-size:11px"> (${reg})</span></td>
+    <td style="padding:5px 4px;text-align:center">
       <input type="number" min="0" max="99" value="${actualMap[city]||0}" data-city="${esc(city)}" data-type="out"
-        style="width:54px;height:28px;padding:0 4px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;text-align:center;outline:none">
+        style="width:54px;height:30px;padding:0 4px;border:1.5px solid var(--border);border-radius:6px;background:var(--g50);color:var(--text);font-family:inherit;font-size:13px;text-align:center;outline:none">
     </td>
-    <td style="padding:5px 4px">
+    <td style="padding:5px 4px;text-align:center">
       <input type="number" min="0" max="99" value="${returnMap[city]||''}" placeholder="—" data-city="${esc(city)}" data-type="ret"
-        style="width:54px;height:28px;padding:0 4px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;text-align:center;outline:none">
+        style="width:54px;height:30px;padding:0 4px;border:1.5px solid var(--border);border-radius:6px;background:var(--g50);color:var(--text);font-family:inherit;font-size:13px;text-align:center;outline:none">
     </td>
   </tr>`).join('');
-  el.innerHTML=`
-    <div style="padding:12px 14px;border-top:1px solid var(--border);background:var(--g50)">
-      <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">✏️ עריכת נתונים</div>
-      <textarea id="snap-notes-${snapId}" placeholder="הערות על הרישום (חסר מקומות, עודף, הערות כלליות…)"
-        style="width:100%;min-height:60px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;direction:rtl;resize:vertical;box-sizing:border-box;outline:none;margin-bottom:10px">${esc(snap.notes||'')}</textarea>
-      <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px">
-        <thead><tr>
-          <th style="text-align:right;padding:4px 8px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">עיר</th>
-          <th style="text-align:center;padding:4px 4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">🚌 יצאו</th>
-          <th style="text-align:center;padding:4px 4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">🔄 חזרו</th>
-        </tr></thead>
-        <tbody>${cityRows}</tbody>
-      </table>
-      <div style="display:flex;gap:8px">
-        <button onclick="snapSaveMeta(${snapId})" style="flex:1;height:34px;background:#166534;color:#fff;border:none;border-radius:7px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px">💾 שמור</button>
-        <button onclick="snapOpenEditor(${snapId})" style="height:34px;padding:0 14px;background:var(--g100);border:1px solid var(--border);border-radius:7px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
+  const typeOpts=SNAP_NOTE_TYPES.map(t=>`<option value="${t.id}">${t.emoji} ${t.label}</option>`).join('');
+  const ov=document.createElement('div');
+  ov.id='snap-modal-overlay';ov.className='snap-modal-overlay';
+  ov.onclick=e=>{if(e.target===ov)snapCloseEditor();}
+  ov.innerHTML=`
+    <div class="snap-modal" dir="rtl">
+      <div class="snap-modal-head">
+        <div>
+          <div style="font-weight:800;font-size:15px">✏️ עריכת רישום</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(snap.name||'')} · ${dateStr}</div>
+        </div>
+        <button onclick="snapCloseEditor()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:6px;line-height:1">×</button>
+      </div>
+      <div class="snap-modal-body">
+        <!-- אוטובוסים -->
+        <div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">🚌 אוטובוסים לפי ערים</div>
+          <table id="snap-modal-buses" style="width:100%;font-size:12px;border-collapse:collapse">
+            <thead><tr>
+              <th style="text-align:right;padding:4px 8px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)">עיר</th>
+              <th style="text-align:center;padding:4px 4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);min-width:64px">🚌 יצאו</th>
+              <th style="text-align:center;padding:4px 4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);min-width:64px">🔄 חזרו</th>
+            </tr></thead>
+            <tbody>${cityRows}</tbody>
+          </table>
+        </div>
+        <!-- הערות -->
+        <div>
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--accent)">📝 הערות</div>
+          <div id="snap-notes-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">
+            <select id="snap-note-type-sel"
+              style="height:34px;padding:0 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer">
+              ${typeOpts}
+            </select>
+            <input id="snap-note-text-inp" type="text" placeholder="טקסט ההערה…" maxlength="200"
+              style="flex:1;min-width:120px;height:34px;padding:0 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;outline:none;direction:rtl"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();snapAddNote();}">
+            <button onclick="snapAddNote()"
+              style="height:34px;padding:0 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">+ הוסף</button>
+          </div>
+        </div>
+      </div>
+      <div class="snap-modal-foot">
+        <button id="snap-modal-save-btn" onclick="snapSaveMeta()"
+          style="flex:1;height:38px;background:#166534;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px">💾 שמור</button>
+        <button onclick="snapCloseEditor()"
+          style="height:38px;padding:0 18px;background:var(--g100);border:1px solid var(--border);border-radius:8px;font-family:inherit;cursor:pointer;font-size:13px">ביטול</button>
       </div>
     </div>`;
+  document.body.appendChild(ov);
+  snapRenderNotesList();
+  // focus על שדה הטקסט
+  setTimeout(()=>document.getElementById('snap-note-text-inp')?.focus(),50);
 }
 
-async function snapSaveMeta(snapId){
-  const el=document.getElementById(`snap-editor-${snapId}`);
-  if(!el)return;
-  const notes=document.getElementById(`snap-notes-${snapId}`)?.value.trim()||'';
+function snapCloseEditor(){
+  document.getElementById('snap-modal-overlay')?.remove();
+  _snapEditorId=null;_snapEditorNotes=[];
+}
+
+function snapRenderNotesList(){
+  const el=document.getElementById('snap-notes-list');if(!el)return;
+  if(!_snapEditorNotes.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:8px 0">אין הערות עדיין</div>';
+    return;
+  }
+  el.innerHTML=_snapEditorNotes.map((n,i)=>{
+    const t=SNAP_NOTE_TYPES.find(x=>x.id===n.type)||SNAP_NOTE_TYPES[0];
+    return `<div class="snap-note-chip">
+      <button class="snap-note-del" onclick="snapDeleteNote(${i})" title="מחק הערה">🗑</button>
+      <span class="snap-note-type-badge ${t.cls}">${t.emoji} ${t.label}</span>
+      <span style="flex:1;font-size:13px;font-weight:500">${esc(n.text)}</span>
+    </div>`;
+  }).join('');
+}
+
+function snapAddNote(){
+  const typeEl=document.getElementById('snap-note-type-sel');
+  const textEl=document.getElementById('snap-note-text-inp');
+  if(!typeEl||!textEl)return;
+  const text=textEl.value.trim();
+  if(!text)return;
+  _snapEditorNotes.push({id:Date.now(),type:typeEl.value,text});
+  textEl.value='';
+  snapRenderNotesList();
+  textEl.focus();
+}
+
+function snapDeleteNote(idx){
+  _snapEditorNotes.splice(idx,1);
+  snapRenderNotesList();
+}
+
+async function snapSaveMeta(){
+  const snapId=_snapEditorId;if(!snapId)return;
+  const modal=document.getElementById('snap-modal-overlay');
+  const saveBtn=document.getElementById('snap-modal-save-btn');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ שומר…';}
   const actualBuses=[],returnBuses=[];
-  el.querySelectorAll('input[data-type="out"]').forEach(inp=>{
+  modal?.querySelectorAll('input[data-type="out"]').forEach(inp=>{
     const v=parseInt(inp.value)||0;if(v>0)actualBuses.push({city:inp.dataset.city,buses:v});
   });
-  el.querySelectorAll('input[data-type="ret"]').forEach(inp=>{
+  modal?.querySelectorAll('input[data-type="ret"]').forEach(inp=>{
     const v=parseInt(inp.value)||0;if(v>0)returnBuses.push({city:inp.dataset.city,buses:v});
   });
-  const btn=el.querySelector('button');if(btn){btn.disabled=true;btn.textContent='⏳ שומר…';}
-  await snapUpdateMeta(snapId,{notes,actualBuses,returnBuses});
+  const ok=await snapUpdateMeta(snapId,{notesList:_snapEditorNotes,actualBuses,returnBuses});
+  if(ok)snapCloseEditor();
+  else if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 שמור';}
 }
 
 // רינדור כרטיס תמונת מצב אחת (משותף לארכיון ולפאנל מנהל)
@@ -2290,13 +2422,18 @@ function renderSnapCard(s,periodId,opts){
     ?`<span style="color:#059669;font-weight:700">🚌 ${s.totalActualBuses} אוטובוסים יצאו</span>${s.totalReturnBuses?` · <span style="color:#7C3AED;font-weight:700">↩ ${s.totalReturnBuses} חזרה</span>`:''}`
     :'<span style="color:var(--muted);font-size:13px">ללא נתוני אוטובוסים</span>';
   const periodArg=periodId?`,'${periodId}'`:'';
-  const notesHtml=s.notes?`<div style="margin-top:8px;padding:8px 12px;background:var(--amber-bg);border:1px solid #FCD34D;border-radius:7px;font-size:13px;color:var(--amber)">📝 ${esc(s.notes)}</div>`:'';
+  // הערות — תמיכה בסוגים
+  const notesList=s.notesList||(s.notes&&typeof s.notes==='string'&&s.notes.trim()?[{id:0,type:'general',text:s.notes.trim()}]:[]);
+  const hasNotes=notesList.length>0;
+  const notesHtml=hasNotes?`<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+    ${notesList.map(n=>{const t=SNAP_NOTE_TYPES.find(x=>x.id===n.type)||SNAP_NOTE_TYPES[0];return`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;background:var(--g50);border:1px solid var(--border);border-radius:8px;font-size:13px"><span class="snap-note-type-badge ${t.cls}">${t.emoji} ${t.label}</span><span>${esc(n.text)}</span></div>`}).join('')}
+  </div>`:'';
   return `<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">
     <div onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;this.querySelector('.arch-arrow').textContent=this.nextElementSibling.hidden?'▼':'▲'"
       class="snap-collapsed-head" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);gap:8px;user-select:none;flex-wrap:wrap">
       <div class="snap-collapsed-info" style="flex:1;min-width:0">
         <div style="font-size:14px;font-weight:700">${esc(s.name)}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}${s.notes?' · 📝':''}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr} · ${s.total.toLocaleString('he')} נרשמו${s.totalActualBuses?' · 🚌 '+s.totalActualBuses:''}${hasNotes?' · 📝 '+notesList.length:''}</div>
       </div>
       <div class="snap-header-btns" style="display:flex;align-items:center;gap:6px;flex-shrink:0" onclick="event.stopPropagation()">
         <button onclick="snapOpenEditor(${s.id})" style="height:28px;padding:0 9px;border:1.5px solid var(--border);border-radius:7px;background:var(--g100);color:var(--text);font-family:inherit;font-weight:600;font-size:12px;cursor:pointer">✏️ עריכה</button>
@@ -2325,7 +2462,6 @@ function renderSnapCard(s,periodId,opts){
         </div>
       </div>
       <div id="snap-table-${s.id}" hidden style="margin-top:10px;overflow-x:auto"></div>
-      <div id="snap-editor-${s.id}" hidden style="margin-top:10px"></div>
     </div>
   </div>`;
 }
