@@ -448,8 +448,9 @@ async function initServiceWorker(){
 }
 
 let _token=null,_tokenAt=0,_records=[],_columns=[];
-// טען cache אחרון מ-localStorage (מוצג מיד, לפני ה-fetch)
-try{const c=localStorage.getItem('tifrah_records_cache');if(c){_records=JSON.parse(c);}}catch{}
+// cache שמור רק כ-fallback לאי-חיבור — לא מוצג מיד
+try{const c=localStorage.getItem('tifrah_records_cache');if(c){_cachedRecords=JSON.parse(c);}}catch{}
+let _cachedRecords=_cachedRecords||null;
 
 // שדות קבועים לפי ApprovalAll.ini
 const CITY_KEY='P050';
@@ -888,8 +889,9 @@ async function loadData(){
     else{renderDashboard();}
     setStatus('ok','מעודכן');
   }catch(e){console.error(e);setStatus('err','שגיאה');showAlert('error','שגיאת טעינה',e.message.slice(0,120));
-    // אם יש נתונים מוצגים — שמור אותם; אל תחליף בהודעת שגיאה
-    if(!_records.length)qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`;
+    // fallback: הצג cache אם יש, אחרת הודעת שגיאה
+    if(!_records.length&&_cachedRecords?.length){_records=_cachedRecords;renderDashboard();showAlert('warning','מוצגים נתונים שמורים','ללא חיבור לשרת');}
+    else if(!_records.length)qs('city-grid').innerHTML=`<div class="empty"><div class="ico">❌</div><p>${esc(e.message)}</p></div>`;
     else renderDashboard();}
   finally{_loadingInProgress=false;}
 }
