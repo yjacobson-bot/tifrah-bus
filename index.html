@@ -16,9 +16,9 @@
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1829;--surface:#112240;--text:#CBD5E0;--muted:#64748B;--border:#1E3A5C;--sky:#0B1829;--g50:#0D1B2E;--g100:#112240;--g200:#1E3A5C;--white:#112240;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0B1829;--surface:#112240;--text:#CBD5E0;--muted:#64748B;--border:#1E3A5C;--sky:#0B1829;--g50:#0D1B2E;--g100:#112240;--g200:#1E3A5C;--white:#112240;color-scheme:dark}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;font-family:'Assistant',system-ui,sans-serif;background:var(--bg);color:var(--text);direction:rtl;font-size:15px;line-height:1.5}
+body{margin:0;font-family:'Assistant',system-ui,sans-serif;background:var(--bg);color:var(--text);direction:rtl;font-size:15px;line-height:1.5;overflow-x:hidden}
 #top-bar{background:linear-gradient(135deg,var(--brand),var(--brand-mid));color:#fff;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,.3)}
-.bar-inner{max-width:1400px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center;gap:12px}
+.bar-inner{max-width:1400px;margin:0 auto;padding:0 20px;height:54px;display:flex;align-items:center;gap:12px;overflow:hidden}
 .brand{font-size:17px;font-weight:800;flex:0 0 auto;display:flex;align-items:center;gap:8px}
 .brand small{font-size:12px;font-weight:400;opacity:.65;margin-right:6px}
 .bar-center{flex:1;display:flex;align-items:center;justify-content:center}
@@ -27,7 +27,7 @@ body{margin:0;font-family:'Assistant',system-ui,sans-serif;background:var(--bg);
 #countdown-ring svg{transform:rotate(-90deg)}
 #ring-bg{fill:none;stroke:rgba(255,255,255,.25);stroke-width:3}
 #ring-fg{fill:none;stroke:#7DD3FC;stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset .9s linear;stroke-dasharray:75.4}
-.bar-end{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.bar-end{display:flex;align-items:center;gap:6px;flex-shrink:0;min-width:0}
 .dot{width:8px;height:8px;border-radius:50%}
 .dot.gray{background:#94A3B8}.dot.pulse{background:#FCD34D;animation:blink .8s infinite alternate}
 .dot.ok{background:#6EE7B7}.dot.err{background:#FCA5A5}
@@ -208,9 +208,14 @@ mark{background:#FEF08A;color:#713F12;border-radius:3px;padding:0 1px}
   #refresh-label{display:none}
   #countdown-ring{width:24px;height:24px}
   #status-lbl{display:none}
-  .btn-refresh{padding:4px 8px;font-size:11px}
+  .btn-refresh{padding:4px 7px;font-size:13px;min-width:32px}
   /* hide pause on mobile - only show refresh + archive + theme */
   #btn-pause{display:none}
+  /* כפתורי bar-end — אייקון בלבד במובייל */
+  #archive-tab-btn{font-size:0}
+  #archive-tab-btn::before{content:'📂';font-size:16px}
+  #btn-theme{font-size:16px}
+  .bar-end .btn-refresh:not(#btn-theme):not(#archive-tab-btn){font-size:16px}
   /* ══ גוף ══ */
   #body{padding:10px 10px 80px;gap:10px}
   .section{padding:12px 12px;border-radius:12px}
