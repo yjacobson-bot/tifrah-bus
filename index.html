@@ -116,27 +116,34 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 :root[data-theme="light"] .loading-typewriter,:root:not([data-theme="dark"]):not([data-theme="auto"]) .loading-typewriter{color:#111}
 @media(prefers-color-scheme:light){:root:not([data-theme="dark"]) .loading-typewriter{color:#111}}
 /* ══ Flip-card countdown ══ */
-.cd-days-row{font-size:18px;font-weight:700;margin-bottom:16px;opacity:.85;letter-spacing:.03em}
-.cd-days-num{font-size:clamp(28px,5vw,42px);font-weight:900;margin-left:5px;color:var(--cd-accent)}
-.cd-days-lbl{font-size:18px}
+@keyframes cd-slide-in{0%{transform:translateY(-60%);opacity:0}60%{transform:translateY(8%);opacity:1}100%{transform:translateY(0);opacity:1}}
+@keyframes cd-slide-out{0%{transform:translateY(0);opacity:1}100%{transform:translateY(60%);opacity:0}}
+.cd-days-row{font-size:18px;font-weight:700;margin-bottom:12px;opacity:.85;letter-spacing:.03em}
+.cd-days-num{font-size:clamp(24px,4vw,36px);font-weight:900;margin-left:5px;color:var(--cd-accent)}
+.cd-days-lbl{font-size:16px}
 .cd-time-row{display:flex;align-items:center;justify-content:center;gap:6px;direction:ltr}
-.cd-unit{display:flex;flex-direction:column;align-items:center;gap:8px}
-.cd-label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
+.cd-unit{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cd-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
 .cd-card{
   display:flex;align-items:center;justify-content:center;
-  width:clamp(64px,14vw,90px);height:clamp(72px,16vw,100px);
+  width:clamp(44px,8vw,60px);height:clamp(50px,9vw,68px);
   background:var(--cd-card-bg);
-  border-radius:12px;
-  box-shadow:0 4px 18px var(--cd-shadow),inset 0 1px 0 rgba(255,255,255,.12);
-  font-size:clamp(40px,10vw,68px);font-weight:900;line-height:1;
+  border-radius:10px;
+  box-shadow:0 3px 12px var(--cd-shadow),inset 0 1px 0 rgba(255,255,255,.12);
+  font-size:clamp(26px,5.5vw,44px);font-weight:900;line-height:1;
   font-variant-numeric:tabular-nums;
   color:var(--cd-text);
   position:relative;overflow:hidden;
   border:1px solid var(--cd-border);
   transition:transform .08s;
 }
+.cd-card.cd-animating{animation:cd-slide-in .32s cubic-bezier(.22,1,.36,1) forwards}
 .cd-card::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:var(--cd-line);z-index:2}
-.cd-sep{font-size:clamp(30px,7vw,48px);font-weight:900;line-height:1;color:var(--cd-accent);opacity:.7;margin-bottom:24px}
+.cd-sep{font-size:clamp(18px,4vw,28px);font-weight:900;line-height:1;color:var(--cd-accent);opacity:.7;margin-bottom:12px}
+/* two-column banner: info left, timer right (RTL → timer on visual right) */
+.cd-banner-wrap{display:flex;align-items:center;gap:0;width:100%;min-height:90px}
+.cd-info-col{flex:1;padding:18px 16px 18px 8px;display:flex;flex-direction:column;justify-content:center;gap:6px;text-align:right}
+.cd-timer-col{flex:0 0 auto;padding:18px 8px 18px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--cd-border)}
 /* pending = amber, closed = red */
 .cd-pending{--cd-accent:#D97706;--cd-card-bg:#1c1200;--cd-text:#FCD34D;--cd-border:rgba(217,119,6,.35);--cd-shadow:rgba(217,119,6,.2);--cd-line:rgba(255,255,255,.08)}
 .cd-closed{--cd-accent:#DC2626;--cd-card-bg:#1c0000;--cd-text:#FCA5A5;--cd-border:rgba(220,38,38,.35);--cd-shadow:rgba(220,38,38,.2);--cd-line:rgba(255,255,255,.08)}
@@ -616,10 +623,10 @@ function fmtDiffSecs(ms){
   const tot=Math.floor(ms/1000);
   const d=Math.floor(tot/86400),h=Math.floor((tot%86400)/3600),m=Math.floor((tot%3600)/60),s=tot%60;
   const ss=String(s).padStart(2,'0'),mm=String(m).padStart(2,'0'),hh=String(h).padStart(2,'0');
-  const u=(lbl,val)=>`<div class="cd-unit"><div class="cd-card">${val}</div><div class="cd-label">${lbl}</div></div>`;
+  const u=(lbl,val,id)=>`<div class="cd-unit"><div class="cd-card" data-cd-id="${id}" data-cd-val="${val}">${val}</div><div class="cd-label">${lbl}</div></div>`;
   const sep=`<div class="cd-sep">:</div>`;
   const daysRow=d>0?`<div class="cd-days-row"><span class="cd-days-num">${d}</span><span class="cd-days-lbl"> ימים</span></div>`:'';
-  const timeRow=`<div class="cd-time-row">${(d>0||h>0)?u('שעות',hh)+sep:''}${u('דקות',mm)}${sep}${u('שניות',ss)}</div>`;
+  const timeRow=`<div class="cd-time-row">${(d>0||h>0)?u('שעות',hh,'h')+sep:''}${u('דקות',mm,'m')}${sep}${u('שניות',ss,'s')}</div>`;
   return daysRow+timeRow;
 }
 // legacy alias used elsewhere
@@ -642,7 +649,30 @@ function _tickExtStatus(){
     const dc=document.getElementById('dash-content');if(dc)dc.hidden=false;
     return;
   }
-  countdown.innerHTML=fmtDiffSecs(diff);
+  const newHtml=fmtDiffSecs(diff);
+  // smart update: only animate cards whose value changed
+  const tmp=document.createElement('div');tmp.innerHTML=newHtml;
+  const newCards=tmp.querySelectorAll('[data-cd-id]');
+  const oldCards=countdown.querySelectorAll('[data-cd-id]');
+  if(oldCards.length===newCards.length){
+    newCards.forEach(nc=>{
+      const id=nc.dataset.cdId,val=nc.dataset.cdVal;
+      const oc=countdown.querySelector(`[data-cd-id="${id}"]`);
+      if(oc&&oc.dataset.cdVal!==val){
+        oc.dataset.cdVal=val;oc.textContent=val;
+        oc.classList.remove('cd-animating');
+        void oc.offsetWidth; // reflow to restart animation
+        oc.classList.add('cd-animating');
+      }
+    });
+    // update days row if present
+    const newDays=tmp.querySelector('.cd-days-num');
+    const oldDays=countdown.querySelector('.cd-days-num');
+    if(newDays&&oldDays&&oldDays.textContent!==newDays.textContent)oldDays.textContent=newDays.textContent;
+    if(!newDays&&oldDays)oldDays.closest('.cd-days-row')?.remove();
+  } else {
+    countdown.innerHTML=newHtml; // structure changed (e.g. hours appeared/disappeared)
+  }
 }
 
 async function loadExtStatus(){
@@ -677,24 +707,34 @@ async function loadExtStatus(){
 
     if(endTime&&now>endTime){
       const openIn=startTime&&startTime>now?fmtDiffSecs(startTime-now):null;
-      showBanner(`
-        <div class="cd-closed" style="text-align:center;padding:28px 16px 20px;width:100%">
-          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:${openIn?'16px':'0'}">🔒 השלוחה סגורה לרישום</div>
-          ${openIn?`<div style="font-size:13px;color:var(--muted);margin-bottom:14px">תיפתח בעוד:</div>
-          <div id="ext-countdown">${openIn}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:14px;opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>`:''}
-        </div>`,
-        openIn&&startTime?{type:'closed',targetTime:startTime}:null);
+      const closedHtml=openIn
+        ?`<div class="cd-closed cd-banner-wrap">
+            <div class="cd-info-col">
+              <div style="font-size:15px;font-weight:800;color:var(--text)">🔒 השלוחה סגורה לרישום</div>
+              <div style="font-size:13px;color:var(--muted)">תיפתח בעוד:</div>
+              <div style="font-size:11px;color:var(--muted);opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
+            </div>
+            <div class="cd-timer-col"><div id="ext-countdown">${openIn}</div></div>
+          </div>`
+        :`<div class="cd-closed" style="text-align:center;padding:20px 16px">
+            <div style="font-size:15px;font-weight:800;color:var(--text)">🔒 השלוחה סגורה לרישום</div>
+          </div>`;
+      showBanner(closedHtml, openIn&&startTime?{type:'closed',targetTime:startTime}:null);
     } else if(startTime&&now<startTime){
       const diff=fmtDiffSecs(startTime-now);
-      showBanner(`
-        <div class="cd-pending" style="text-align:center;padding:28px 16px 20px;width:100%">
-          <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:${diff?'16px':'0'}">⏳ הרישום טרם נפתח</div>
-          ${diff?`<div style="font-size:13px;color:var(--muted);margin-bottom:14px">יפתח בעוד:</div>
-          <div id="ext-countdown">${diff}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:14px;opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>`:''}
-        </div>`,
-        {type:'pending',targetTime:startTime});
+      const pendingHtml=diff
+        ?`<div class="cd-pending cd-banner-wrap">
+            <div class="cd-info-col">
+              <div style="font-size:15px;font-weight:800;color:var(--text)">⏳ הרישום טרם נפתח</div>
+              <div style="font-size:13px;color:var(--muted)">יפתח בעוד:</div>
+              <div style="font-size:11px;color:var(--muted);opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
+            </div>
+            <div class="cd-timer-col"><div id="ext-countdown">${diff}</div></div>
+          </div>`
+        :`<div class="cd-pending" style="text-align:center;padding:20px 16px">
+            <div style="font-size:15px;font-weight:800;color:var(--text)">⏳ הרישום טרם נפתח</div>
+          </div>`;
+      showBanner(pendingHtml,{type:'pending',targetTime:startTime});
     } else {
       hideBanner();
     }
