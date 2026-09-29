@@ -126,11 +126,11 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 .cd-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
 .cd-card{
   display:flex;align-items:center;justify-content:center;
-  width:clamp(44px,8vw,60px);height:clamp(50px,9vw,68px);
+  width:clamp(52px,9vw,74px);height:clamp(58px,10vw,82px);
   background:var(--cd-card-bg);
   border-radius:10px;
   box-shadow:0 3px 12px var(--cd-shadow),inset 0 1px 0 rgba(255,255,255,.12);
-  font-size:clamp(26px,5.5vw,44px);font-weight:900;line-height:1;
+  font-size:clamp(30px,6vw,52px);font-weight:900;line-height:1;
   font-variant-numeric:tabular-nums;
   color:var(--cd-text);
   position:relative;overflow:hidden;
@@ -139,11 +139,11 @@ tbody td.idx{color:var(--muted);font-size:12px;text-align:left}
 }
 .cd-card.cd-animating{animation:cd-slide-in .32s cubic-bezier(.22,1,.36,1) forwards}
 .cd-card::after{content:'';position:absolute;left:0;right:0;top:50%;height:1px;background:var(--cd-line);z-index:2}
-.cd-sep{font-size:clamp(18px,4vw,28px);font-weight:900;line-height:1;color:var(--cd-accent);opacity:.7;margin-bottom:12px}
-/* two-column banner: info left, timer right (RTL → timer on visual right) */
-.cd-banner-wrap{display:flex;align-items:center;gap:0;width:100%;min-height:90px}
-.cd-info-col{flex:1;padding:18px 16px 18px 8px;display:flex;flex-direction:column;justify-content:center;gap:6px;text-align:right}
-.cd-timer-col{flex:0 0 auto;padding:18px 8px 18px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--cd-border)}
+.cd-sep{font-size:clamp(20px,4.5vw,32px);font-weight:900;line-height:1;color:var(--cd-accent);opacity:.7;margin-bottom:14px}
+/* two-column banner: timer RIGHT, info LEFT */
+.cd-banner-wrap{display:flex;flex-direction:row;align-items:center;gap:0;width:100%;min-height:90px;direction:ltr}
+.cd-info-col{flex:1;padding:18px 8px 18px 16px;display:flex;flex-direction:column;justify-content:center;gap:6px;text-align:right;direction:rtl}
+.cd-timer-col{flex:0 0 auto;padding:18px 16px 18px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--cd-border)}
 /* pending = amber, closed = red */
 .cd-pending{--cd-accent:#D97706;--cd-card-bg:#1c1200;--cd-text:#FCD34D;--cd-border:rgba(217,119,6,.35);--cd-shadow:rgba(217,119,6,.2);--cd-line:rgba(255,255,255,.08)}
 .cd-closed{--cd-accent:#DC2626;--cd-card-bg:#1c0000;--cd-text:#FCA5A5;--cd-border:rgba(220,38,38,.35);--cd-shadow:rgba(220,38,38,.2);--cd-line:rgba(255,255,255,.08)}
@@ -709,12 +709,12 @@ async function loadExtStatus(){
       const openIn=startTime&&startTime>now?fmtDiffSecs(startTime-now):null;
       const closedHtml=openIn
         ?`<div class="cd-closed cd-banner-wrap">
+            <div class="cd-timer-col"><div id="ext-countdown">${openIn}</div></div>
             <div class="cd-info-col">
               <div style="font-size:15px;font-weight:800;color:var(--text)">🔒 השלוחה סגורה לרישום</div>
               <div style="font-size:13px;color:var(--muted)">תיפתח בעוד:</div>
               <div style="font-size:11px;color:var(--muted);opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
             </div>
-            <div class="cd-timer-col"><div id="ext-countdown">${openIn}</div></div>
           </div>`
         :`<div class="cd-closed" style="text-align:center;padding:20px 16px">
             <div style="font-size:15px;font-weight:800;color:var(--text)">🔒 השלוחה סגורה לרישום</div>
@@ -724,12 +724,12 @@ async function loadExtStatus(){
       const diff=fmtDiffSecs(startTime-now);
       const pendingHtml=diff
         ?`<div class="cd-pending cd-banner-wrap">
+            <div class="cd-timer-col"><div id="ext-countdown">${diff}</div></div>
             <div class="cd-info-col">
               <div style="font-size:15px;font-weight:800;color:var(--text)">⏳ הרישום טרם נפתח</div>
               <div style="font-size:13px;color:var(--muted)">יפתח בעוד:</div>
               <div style="font-size:11px;color:var(--muted);opacity:.7">ניתן לשנות ב-⏰ זמני רישום</div>
             </div>
-            <div class="cd-timer-col"><div id="ext-countdown">${diff}</div></div>
           </div>`
         :`<div class="cd-pending" style="text-align:center;padding:20px 16px">
             <div style="font-size:15px;font-weight:800;color:var(--text)">⏳ הרישום טרם נפתח</div>
