@@ -471,6 +471,15 @@ function showAlert(type,title,msg){
   clearTimeout(_toastTimer);
 }
 function clearAlert(){const el=qs('toast');if(el)el.hidden=true;clearTimeout(_toastTimer)}
+function showToast(msg,type,durationMs){
+  const el=qs('toast');if(!el)return;
+  const icons={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+  const t=type||'info';
+  el.innerHTML=`<span>${icons[t]||'ℹ️'} ${esc(msg)}</span><button onclick="clearAlert()" style="background:none;border:none;cursor:pointer;font-size:16px;color:inherit;padding:0 4px;margin-right:6px">✕</button>`;
+  el.className='toast toast-'+t;el.hidden=false;
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(clearAlert,durationMs||4000);
+}
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function credsOK(){return CONFIG.sysNum!=='XXXXX'&&CONFIG.password!=='YYYYY'}
@@ -2405,7 +2414,8 @@ async function snapSaveMeta(){
   const notesSnapshot=[..._snapEditorNotes];
   snapCloseEditor(); // סוגר מיד — אופטימיסטי
   const ok=await snapUpdateMeta(snapId,{notesList:notesSnapshot,actualBuses,returnBuses});
-  if(ok)showToast('✅ נשמר','success');
+  if(ok)showToast('נשמר בהצלחה','success',4000);
+  else showToast('שמירה נכשלה','error',5000);
 }
 
 // רינדור כרטיס תמונת מצב אחת (משותף לארכיון ולפאנל מנהל)
