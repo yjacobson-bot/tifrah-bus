@@ -848,6 +848,7 @@ async function loadData(){
   if(!credsOK()){qs('cfg-warn').hidden=false;_loadingInProgress=false;return}
   clearAlert();
   loadExtStatus(); // בד"כ לא מחכים — נטען במקביל
+  loadBlockedCities(); // טען סטטוס חסימת ערים במקביל
   // הצג ספינר רק אם אין נתונים כלל — אחרת טען בשקט ברקע
   if(!_logoSrc)_logoSrc=document.querySelector('#top-bar img')?.src||'';
   const _LOGO_SRC=_logoSrc;
