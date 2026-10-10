@@ -12,7 +12,7 @@ fun versionNameToCode(name: String): Int {
            (parts.getOrElse(2) { 0 })
 }
 
-val appVersionName = project.findProperty("appVersionName") as String? ?: "1.4.3"
+val appVersionName = project.findProperty("appVersionName") as String? ?: "1.4.4"
 
 android {
     namespace = "com.chituch.audioeditor"
@@ -79,7 +79,6 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.coroutines.android)
-    implementation(libs.androidx.core.splashscreen)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
