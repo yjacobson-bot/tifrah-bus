@@ -141,7 +141,7 @@ class AudioEditorViewModel(application: Application) : AndroidViewModel(applicat
                 audioPlayer.loadAudio(uri)
                 val waveform = WaveformExtractor.extract(getApplication(), uri, 500)
                 _state.value = _state.value.copy(waveformData = waveform, isLoadingWaveform = false)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _state.value = _state.value.copy(isLoadingWaveform = false, errorMessage = "שגיאה בטעינת הקובץ: ${e.message}")
             }
         }
@@ -360,7 +360,7 @@ class AudioEditorViewModel(application: Application) : AndroidViewModel(applicat
                     exportedFiles = files,
                     successMessage = "✓ נשמר ב$locationHint · תיקיית האפליקציה · ${files.size} קבצים"
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 _state.value = _state.value.copy(isProcessing = false, errorMessage = "שגיאה: ${e.message}")
             }
         }
